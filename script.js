@@ -1,51 +1,36 @@
-document.addEventListener('DOMContentLoaded', () => {
-    let allDebatersData = []; // Global variable to store debater data
-    let allMatchesData = [];   // Global variable to store match data
-    let currentLeaderboardSort = { column: 'rank', order: 'asc' }; // Sort state for leaderboard
-    let overallStatsChartInstance = null; // Chart.js instance for overall stats on homepage
-    let radarChartInstance = null; // Chart.js instance for radar chart on profile page
-    let comparisonChartInstance = null; // Chart.js instance for comparison chart
-
+document.addEventListener('DOMContentLoaded', async () => {
+    let allDebatersData = [];
+    let allMatchesData = [];
+    let currentLeaderboardSort = { column: 'wins', order: 'desc' }; // Default sort for leaderboard
+    let overallStatsChartInstance = null; // Chart.js instance for overall stats
+    let comparisonRadarChartInstance = null; // Chart.js instance for comparison radar chart
 
     // --- Utility Functions ---
 
     function showToast(message, type = 'info') {
         const toastEl = document.getElementById('liveToast');
         const toastBody = document.getElementById('toastBody');
-        if (!toastEl || !toastBody) return; // Guard against missing elements
+        if (!toastEl || !toastBody) return;
 
         toastBody.textContent = message;
-
-        toastEl.classList.remove('text-bg-primary', 'text-bg-success', 'text-bg-danger', 'text-bg-warning', 'text-bg-info');
-        if (type === 'success') toastEl.classList.add('text-bg-success');
-        else if (type === 'error') toastEl.classList.add('text-bg-danger');
-        else if (type === 'warning') toastEl.classList.add('text-bg-warning');
-        else if (type === 'info') toastEl.classList.add('text-bg-info');
-        else toastEl.classList.add('text-bg-primary');
-
+        toastEl.className = 'toast hide'; // Reset classes
+        toastEl.classList.add('text-bg-' + type);
         const toast = new bootstrap.Toast(toastEl);
         toast.show();
-    }
-
-    function setAppRootContent(contentHtml) {
-        const appRoot = document.getElementById('app-root');
-        if (appRoot) {
-            appRoot.innerHTML = contentHtml;
-        }
     }
 
     function getSafeImagePath(path) {
         return path && path !== '' ? path : 'default_avatar.png';
     }
 
-    // --- Fetch Data Function ---
+    // --- Data Loading ---
     async function fetchData() {
         try {
             console.log("Attempting to fetch data.json...");
             const response = await fetch('data.json');
             if (!response.ok) {
                 const errorDetail = response.statusText || `HTTP status ${response.status}`;
-                throw new Error(`Failed to fetch data.json: ${errorDetail}.`);
+                throw new Error(`Failed to load data.json: ${errorDetail}.`);
             }
             const data = await response.json();
             allDebatersData = data.debaters;
@@ -55,1153 +40,394 @@ document.addEventListener('DOMContentLoaded', () => {
             return data;
         } catch (error) {
             console.error("Critical error loading data:", error);
-            showToast('Failed to load application data! Please check console and data.json.', 'error');
-            setAppRootContent(`
+            showToast('Failed to load application data! Check console for details.', 'error');
+            // Provide visual feedback for data loading failure
+            document.body.innerHTML = `
                 <div class="container my-5 text-center text-danger animate__animated animate__fadeIn" role="alert">
                     <i class="fas fa-exclamation-triangle fa-3x mb-3"></i>
                     <h2>Failed to Load Application Data!</h2>
                     <p>Error: ${error.message}</p>
-                    <p>Please ensure 'data.json' exists in the same folder and is valid JSON. Also, verify you are running a local web server (e.g., Live Server in VS Code).</p>
+                    <p>Please ensure 'data.json' exists in the same folder and is valid JSON. You must run a local web server (e.g., Live Server in VS Code) for this to work.</p>
                 </div>
-            `);
+            `;
             return null;
         }
     }
 
-    // --- Page Rendering Functions ---
+    // --- Section Rendering Functions ---
 
-    function renderHomePageContent(debaters, matches) {
-        console.log("Rendering Home Page Content...");
-        const homePageHtml = `
-            <div class="hero-image-container animate__animated animate__fadeIn">
-              <img src="7745A053-1315-4B4D-AB24-9BFB05370A20.jpeg" alt="Debater Battle Arena Hero" loading="lazy">
+    function renderTopLowRecords(debaters) {
+        const topLowSection = document.getElementById('topLowRecordsSection');
+        if (!topLowSection) return;
+
+        const sorted = [...debaters].sort((a,b) => b.wins - a.wins || (b.wins+b.losses) - (a.wins+a.losses));
+        const top3 = sorted.slice(0,3);
+        const low3 = sorted.slice(-3).reverse().filter(d => !top3.some(t => t.id === d.id)); // Ensure distinct
+
+        let html = `
+            <div class="col-md-6">
+                <h3 class="mb-3 text-success">Top Record Debaters DBA <i class="fas fa-crown ms-2"></i></h3>
+                <div class="row g-3">
+        `;
+        top3.forEach(d => html += `
+            <div class="col-md-4">
+                <div class="card shadow h-100">
+                    <div class="card-body">
+                        <h4>${d.name} <img src="${getSafeImagePath(d.flag)}" width="24" class="ms-2" alt="${d.country_code}"/></h4>
+                        <p>Record: <span class="badge bg-success">${d.record}</span></p>
+                    </div>
+                </div>
             </div>
-
-            <section class="container my-5">
-              <h2 class="text-center mb-4 fw-bold text-uppercase animate__animated animate__fadeInDown">Top & Low Record Debaters <i class="fas fa-chart-line ms-2"></i></h2>
-              <div class="row g-4" id="topLowRecordsSection">
-                </div>
-            </section>
-
-            <hr class="my-5">
-
-            <section class="container my-5">
-              <h2 class="mb-4 text-center fw-bold text-uppercase animate__animated animate__fadeInDown">Debater Profiles (Quick View) <i class="fas fa-users ms-2"></i></h2>
-              <div class="row g-4 justify-content-center" id="quickViewProfiles">
-                </div>
-            </section>
-
-            <hr class="my-5">
-
-            <section class="container my-5 debater-profile">
-              <h2 class="text-center fw-bold text-uppercase mb-4 animate__animated animate__fadeInDown">Debater Profile Metrics <i class="fas fa-clipboard-list ms-2"></i></h2>
-              
-              <div class="mb-4 animate__animated animate__fadeIn">
-                <input type="text" class="form-control" id="debaterProfileSearch" placeholder="Cari profil debater berdasarkan nama...">
-              </div>
-
-              <div class="row g-4" id="detailedProfilesSection">
-                <div class="col-12 text-center text-muted animate__animated animate__fadeIn">
-                  <p><i class="fas fa-search me-2"></i> Ketik nama debater di atas untuk melihat metrik profil lengkap mereka.</p>
-                </div>
-              </div>
-            </section>
-
-            <hr class="my-5">
-
-            <section class="container my-5">
-              <h2 class="text-center fw-bold text-uppercase mb-4 animate__animated animate__fadeInDown">Leaderboard Per Tier (DBA) <i class="fas fa-trophy ms-2"></i></h2>
-
-              <div class="leaderboard-filters row mb-3 animate__animated animate__fadeIn">
-                <div class="col-md-6 mb-2">
-                  <input type="text" class="form-control" id="leaderboardSearch" placeholder="Cari debater di leaderboard...">
-                </div>
-                <div class="col-md-6 mb-2">
-                  <select class="form-select" id="tierFilter">
-                    <option value="">Filter by Tier</option>
-                    <option value="High Tier">High Tier</option>
-                    <option value="Mid Tier">Mid Tier</option>
-                    <option value="Low Tier">Low Tier</option>
-                  </select>
-                </div>
-                <div class="col-md-6 mb-2">
-                  <select class="form-select" id="countryFilter">
-                    <option value="">Filter by Country</option>
-                    </select>
-                </div>
-                <div class="col-md-6 mb-2">
-                    <canvas id="overallStatsChart" height="100" aria-label="Overall Debater Statistics Chart"></canvas>
-                </div>
-              </div>
-
-              <div class="mb-5">
-                <h3 class="text-white bg-warning text-center py-2 rounded-top animate__animated animate__fadeInLeft">High Tier <i class="fas fa-star ms-2"></i></h3>
-                <div class="table-responsive animate__animated animate__fadeInUp">
-                  <table class="table table-bordered table-striped text-center align-middle" aria-label="High Tier Leaderboard">
-                    <thead class="table-dark">
-                      <tr>
-                        <th data-sort="rank" role="columnheader" aria-sort="none">Rank <i class="fas fa-sort sort-icon"></i></th>
-                        <th role="columnheader">Photo</th>
-                        <th data-sort="name" role="columnheader">Name <i class="fas fa-sort sort-icon"></i></th>
-                        <th data-sort="country" role="columnheader">Country <i class="fas fa-sort sort-icon"></i></th>
-                        <th data-sort="wins" role="columnheader">Record <i class="fas fa-sort sort-icon"></i></th>
-                      </tr>
-                    </thead>
-                    <tbody id="highTierBody">
-                      </tbody>
-                  </table>
-                </div>
-              </div>
-
-              <div class="mb-5">
-                <h3 class="text-white bg-secondary text-center py-2 rounded-top animate__animated animate__fadeInLeft">Mid Tier <i class="fas fa-trophy ms-2"></i></h3>
-                <div class="table-responsive animate__animated animate__fadeInUp">
-                  <table class="table table-bordered table-striped text-center align-middle" aria-label="Mid Tier Leaderboard">
-                    <thead class="table-dark">
-                      <tr>
-                        <th data-sort="rank" role="columnheader">Rank <i class="fas fa-sort sort-icon"></i></th>
-                        <th role="columnheader">Photo</th>
-                        <th data-sort="name" role="columnheader">Name <i class="fas fa-sort sort-icon"></i></th>
-                        <th data-sort="country" role="columnheader">Country <i class="fas fa-sort sort-icon"></i></th>
-                        <th data-sort="wins" role="columnheader">Record <i class="fas fa-sort sort-icon"></i></th>
-                      </tr>
-                    </thead>
-                    <tbody id="midTierBody">
-                          </tbody>
-                      </table>
+        `);
+        html += `</div></div><div class="col-md-6">
+                <h3 class="mb-3 text-danger">Low Record Debaters DBA <i class="fas fa-arrow-down ms-2"></i></h3>
+                <div class="row g-3">
+        `;
+        low3.forEach(d => html += `
+            <div class="col-md-4">
+                <div class="card shadow h-100">
+                    <div class="card-body">
+                        <h4>${d.name} <img src="${getSafeImagePath(d.flag)}" width="24" class="ms-2" alt="${d.country_code}"/></h4>
+                        <p>Record: <span class="badge bg-danger">${d.record}</span></p>
                     </div>
-                  </div>
-
-                  <div class="mb-5">
-                    <h3 class="text-white bg-dark text-center py-2 rounded-top animate__animated animate__fadeInLeft">Low Tier <i class="fas fa-medal ms-2"></i></h3>
-                    <div class="table-responsive animate__animated animate__fadeInUp">
-                      <table class="table table-bordered table-striped text-center align-middle" aria-label="Low Tier Leaderboard">
-                        <thead class="table-dark">
-                          <tr>
-                            <th data-sort="rank" role="columnheader">Rank <i class="fas fa-sort sort-icon"></i></th>
-                            <th role="columnheader">Photo</th>
-                            <th data-sort="name" role="columnheader">Name <i class="fas fa-sort sort-icon"></i></th>
-                            <th data-sort="country" role="columnheader">Country <i class="fas fa-sort sort-icon"></i></i></th>
-                            <th data-sort="wins" role="columnheader">Record <i class="fas fa-sort sort-icon"></i></th>
-                          </tr>
-                        </thead>
-                        <tbody id="lowTierBody">
-                          </tbody>
-                      </table>
-                    </div>
-                  </div>
-                </section>
-
-                <hr class="my-5">
-
-                <section class="container my-5 recent-matches-section rounded shadow">
-                  <h2 class="text-center mb-5 fw-bold text-uppercase animate__animated animate__fadeInDown">Recent Matches <i class="fas fa-fire ms-2"></i></h2>
-                  <div class="row g-4 justify-content-center" id="recentMatchesSection">
-                    </div>
-                </section>
-
-                <hr class="my-5">
-
-                <section class="container my-5 individual-match-history">
-                  <h2 class="text-center mb-4 fw-bold text-uppercase animate__animated animate__fadeInDown">Individual Match History <i class="fas fa-history ms-2"></i></h2>
-                  <div class="row g-3" id="individualMatchHistory">
-                    </div>
-                </section>
-            `;
-        setAppRootContent(contentHtml); // Set content to app-root
-
-        // Now that elements are in DOM, call specific renderers
-        renderTopLowRecords(debaters);
-        renderQuickViewProfiles(debaters);
-        renderDetailedProfiles(debaters, ''); // Initialize empty search
-        renderLeaderboard(debaters, '', '', '', currentLeaderboardSort.column, currentLeaderboardSort.order);
-        renderOverallStatsChart(debaters);
-        renderRecentMatches(matches);
-        renderIndividualMatchHistory(debaters, matches);
-
-        // Attach all event listeners for Home Page elements
-        attachHomePageEventListeners(debaters, matches);
-        console.log("Home Page Rendered and Event Listeners Attached.");
+                </div>
+            </div>
+        `);
+        html += `</div></div>`;
+        topLowSection.innerHTML = html;
     }
 
-    // This function renders the content for a PROFILE page
-    function renderProfilePageContent(debaterId, debaters, matches) {
-        console.log(`Rendering Profile Page Content for ID: ${debaterId}`); // Debugging
-        const debater = debaters.find(d => d.id === debaterId);
+    function renderQuickViewProfiles(debaters) {
+        const quickViewSection = document.getElementById('quickViewProfiles');
+        if (!quickViewSection) return;
 
-        if (!debater) {
-            setAppRootContent(`
-                <div class="container my-5 text-center text-danger animate__animated animate__fadeIn" role="alert">
-                    <i class="fas fa-user-times fa-3x mb-3"></i>
-                    <h2>Debater Not Found!</h2>
-                    <p>The profile you are looking for does not exist.</p>
-                    <a href="#home" class="btn btn-primary mt-3" aria-label="Back to Home page"><i class="fas fa-arrow-left me-2"></i> Back to Home</a>
-                </div>
-            `);
-            document.title = 'DBA - Not Found';
-            showToast('Debater profile not found!', 'error');
-            return;
-        }
-
-        document.title = `DBA - ${debater.name}'s Profile`;
-
-        let metricsHtml = '';
-        const metricLabels = [];
-        const metricScores = [];
-        for (const [metricName, metricScore] of Object.entries(debater.metrics)) {
-            const widthPercentage = (parseFloat(metricScore) / 10) * 100;
-            metricsHtml += `
-                <div class="profile-metric">
-                    <span>${metricName}:</span>
-                    <div class="progress flex-grow-1" role="progressbar" aria-label="${metricName} score" aria-valuenow="${metricScore}" aria-valuemin="0" aria-valuemax="10">
-                        <div class="progress-bar" style="width: ${widthPercentage}%;"></div>
-                    </div>
-                    <span class="metric-value">${metricScore}/10</span>
-                </div>
-            `;
-            metricLabels.push(metricName);
-            metricScores.push(parseFloat(metricScore));
-        }
-
-        const winRate = ((debater.wins / (debater.wins + debater.losses)) * 100).toFixed(2);
-        const totalMatches = debater.wins + debater.losses;
-        const averageMetric = (metricScores.reduce((sum, score) => sum + score, 0) / metricScores.length).toFixed(2);
-
-        const profilePageHtml = `
-            <section class="container my-5">
-                <div class="row justify-content-center">
-                    <div class="col-lg-8">
-                        <div class="card shadow p-4 animate__animated animate__fadeIn">
-                            <div class="text-center">
-                                <img src="${getSafeImagePath(debater.photo)}" class="profile-avatar mb-3 animate__animated animate__zoomIn" alt="${debater.name} Profile" loading="lazy">
-                                <h2 class="profile-name animate__animated animate__fadeInDown">${debater.name} <img src="${getSafeImagePath(debater.flag)}" width="30" class="ms-2" alt="${debater.country_code}"/></h2>
-                                <p class="profile-record animate__animated animate__fadeIn">Record: <span class="badge ${debater.wins > debater.losses ? 'bg-success' : 'bg-danger'}">${debater.record}</span></p>
-                                <p class="text-muted"><i class="fas fa-percentage me-1"></i> Win Rate: ${winRate}% | <i class="fas fa-gamepad me-1"></i> Total Matches: ${totalMatches}</p>
-                                <p class="text-muted"><i class="fas fa-star-half-alt me-1"></i> Average Metric Score: ${averageMetric}/10</p>
-                            </div>
-                            <hr class="my-4">
-                            <div class="profile-metrics mb-4 animate__animated animate__fadeInUp">
-                                <h4 class="text-center mb-3">Key Metrics <i class="fas fa-chart-bar ms-2"></i></h4>
-                                <div class="row">
-                                    <div class="col-md-8 mx-auto">
-                                        ${metricsHtml}
-                                        <canvas id="radarChart" height="250" aria-label="${debater.name} Metrics Radar Chart"></canvas>
-                                    </div>
-                                </div>
-                            </div>
-                            <hr class="my-4">
-                            <div class="profile-detail animate__animated animate__fadeInUp">
-                                <h4 class="text-center mb-3">About ${debater.name} <i class="fas fa-info-circle ms-2"></i></h4>
-                                <p><strong>Country:</strong> ${debater.country}</p>
-                                <p><strong>Favorite Character:</strong> ${debater.character}</p>
-                                <p><strong>Bio:</strong> ${debater.bio}</p>
-                            </div>
-                            <hr class="my-4">
-                            <h4 class="text-center mb-3 animate__animated animate__fadeInUp">Match History <i class="fas fa-fist-raised ms-2"></i></h4>
-                            <div class="row g-3 profile-match-history" id="individualFullMatchHistory">
-                                </div>
-                            <div class="text-center mt-4">
-                                <a href="#home" class="btn btn-outline-primary" aria-label="Back to Home page"><i class="fas fa-arrow-left me-2"></i> Back to Home</a>
+        let html = '';
+        debaters.slice(0, 3).forEach(debater => {
+            html += `
+                <div class="col-md-4">
+                    <div class="card shadow h-100 text-center">
+                        <img src="${getSafeImagePath(debater.photo)}" class="card-img-top" alt="${debater.name}"/>
+                        <div class="card-body">
+                            <h3 class="clickable-name" data-debater-id="${debater.id}">
+                                ${debater.name} <img src="${getSafeImagePath(debater.flag)}" width="24" class="ms-2" alt="${debater.country_code}"/>
+                            </h3>
+                            <p>Record: <span class="badge bg-success">${debater.record}</span></p>
+                            <div id="${debater.id}-desc" class="debater-desc">
+                                <p><strong>Character:</strong> ${debater.character}</p>
+                                <p><strong>Summary:</strong> ${debater.summary}</p>
                             </div>
                         </div>
                     </div>
-                </section>
+                </div>
             `;
-            setAppRootContent(profilePageHtml);
+        });
+        quickViewSection.innerHTML = html;
 
-            // Destroy existing chart instances from other pages/sections
-            if (overallStatsChartInstance) {
-                overallStatsChartInstance.destroy();
-                overallStatsChartInstance = null;
-            }
-            if (radarChartInstance) { // Destroy previous radar chart instance if it exists
-                radarChartInstance.destroy();
-                radarChartInstance = null;
-            }
-            if (comparisonChartInstance) {
-                comparisonChartInstance.destroy();
-                comparisonChartInstance = null;
-            }
-            
-            // Render Radar Chart
-            const ctxRadar = document.getElementById('radarChart');
-            if (ctxRadar) {
-                radarChartInstance = new Chart(ctxRadar, { // Store instance in radarChartInstance
-                    type: 'radar',
-                    data: {
-                        labels: metricLabels,
-                        datasets: [{
-                            label: 'Debater Metrics',
-                            data: metricScores,
-                            backgroundColor: 'rgba(13, 110, 253, 0.2)',
-                            borderColor: 'rgba(13, 110, 253, 1)',
-                            borderWidth: 1,
-                            pointBackgroundColor: 'rgba(13, 110, 253, 1)',
-                            pointBorderColor: '#fff',
-                            pointHoverBackgroundColor: '#fff',
-                            pointHoverBorderColor: 'rgba(13, 110, 253, 1)'
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        scales: {
-                            r: {
-                                angleLines: { display: false },
-                                suggestedMin: 0,
-                                suggestedMax: 10,
-                                ticks: {
-                                    stepSize: 2,
-                                    backdropColor: 'transparent',
-                                    color: '#6c757d'
-                                },
-                                pointLabels: {
-                                    color: '#212529',
-                                    font: { size: 12 }
-                                },
-                                grid: { color: 'rgba(0,0,0,0.1)' }
-                            }
-                        },
-                        plugins: {
-                            legend: { display: false },
-                            tooltip: {
-                                callbacks: {
-                                    label: function(context) {
-                                        return context.dataset.label + ': ' + context.raw + '/10';
-                                    }
-                                }
-                            }
-                        },
-                        elements: {
-                            line: { tension: 0.2 }
-                        }
-                    }
-                });
-            }
+        quickViewSection.querySelectorAll('.clickable-name').forEach(element => {
+            element.addEventListener('click', () => {
+                const descElement = document.getElementById(`${element.dataset.debaterId}-desc`);
+                if (descElement) {
+                    descElement.style.display = (descElement.style.display === "block") ? "none" : "block";
+                }
+            });
+        });
+    }
 
-            // Render full match history for the specific debater
-            const individualFullMatchHistorySection = document.getElementById('individualFullMatchHistory');
-            if (individualFullMatchHistorySection) {
-                const debaterMatches = matches.filter(match =>
-                    match.debater1.id === debater.id || match.debater2.id === debater.id
-                ).sort((a, b) => {
-                    const dateA = a.date ? new Date(a.date) : 0;
-                    const dateB = b.date ? new Date(b.date) : 0;
-                    if (dateA && dateB) return dateB - dateA;
-                    return b.id.localeCompare(a.id);
-                });
+    function renderLeaderboard(debaters, query = '', tierFilter = '', countryFilter = '', sortColumn = 'wins', sortOrder = 'desc') {
+        const highTierBody = document.getElementById('highTierBody');
+        const midTierBody = document.getElementById('midTierBody');
+        const lowTierBody = document.getElementById('lowTierBody');
+        const countryFilterSelect = document.getElementById('countryFilter');
 
-                let matchesHtml = '';
-                if (debaterMatches.length > 0) {
-                    matchesHtml = '<div class="col-12"><p class="text-center text-muted">Loading matches...</p></div>'; // Temp message
-                    // Using a small timeout to ensure canvas rendering has started if needed
-                    setTimeout(() => { 
-                        matchesHtml = ''; // Clear temp message
-                        debaterMatches.forEach(match => {
-                            const isWinner = match.winner === debater.name;
-                            const opponent = match.debater1.id === debater.id ? match.debater2 : match.debater1;
-                            const statusBadgeClass = isWinner ? 'bg-success' : 'bg-danger';
-                            const statusText = isWinner ? 'WIN' : 'LOSS';
-                            const cardBackgroundClass = isWinner ? 'win-card' : 'loss-card';
-                            
-                            const opponentDebater = debaters.find(d => d.id === opponent.id);
-                            const opponentPhoto = getSafeImagePath(opponentDebater ? opponentDebater.photo : '');
-                            const matchDate = match.date ? new Date(match.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'Unknown Date';
+        if (!highTierBody || !midTierBody || !lowTierBody || !countryFilterSelect) return;
 
-                            matchesHtml += `
-                                <div class="col-md-12">
-                                    <div class="card shadow p-3 mb-2 d-flex flex-row align-items-center ${cardBackgroundClass} animate__animated animate__fadeIn">
-                                        <img src="${getSafeImagePath(debater.photo)}" width="50" class="rounded-circle me-3" alt="${debater.name}" loading="lazy">
-                                        <div class="flex-grow-1">
-                                            <h6 class="mb-1 fw-bold">${debater.name} <span class="badge ${statusBadgeClass}">${statusText}</span> vs ${opponent.name}</h6>
-                                            <small class="text-muted">Method: ${match.method} - Character: ${debater.character} vs ${opponent.character}</small><br>
-                                            <small class="text-muted"><i class="fas fa-calendar-alt me-1"></i> Date: ${matchDate} ${match.event ? `(Event: ${match.event})` : ''}</small>
-                                        </div>
-                                        <img src="${opponentPhoto}" width="50" class="rounded-circle ms-3" alt="${opponent.name}" loading="lazy">
-                                    </div>
-                                </div>
-                            `;
-                        });
-                        individualFullMatchHistorySection.innerHTML = matchesHtml;
-                    }, 50); // Small delay to allow initial render
+        // Populate Country Filter on first render or data change
+        if (countryFilterSelect.options.length <= 1) { // Check if only default option exists
+            const uniqueCountries = [...new Set(debaters.map(d => d.country))].sort();
+            uniqueCountries.forEach(country => {
+                const option = document.createElement('option');
+                option.value = country;
+                option.textContent = country;
+                countryFilterSelect.appendChild(option);
+            });
+        }
+        countryFilterSelect.value = countryFilter; // Set current selection
+
+
+        let filteredDebaters = debaters.filter(d =>
+            (query === '' || d.name.toLowerCase().includes(query.toLowerCase()) || d.country.toLowerCase().includes(query.toLowerCase())) &&
+            (tierFilter === '' || d.tier === tierFilter) &&
+            (countryFilter === '' || d.country === countryFilter)
+        );
+
+        const sortFunction = (a, b) => {
+            let valA, valB;
+            if (sortColumn === 'name' || sortColumn === 'country') {
+                valA = a[sortColumn]; valB = b[sortColumn];
+                return sortOrder === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+            } else if (sortColumn === 'wins') {
+                valA = a.wins; valB = b.wins;
+            } else { // Default to rank (wins)
+                valA = a.wins; valB = b.wins;
+            }
+            return sortOrder === 'asc' ? valA - valB : valB - valA;
+        };
+
+        const highTier = filteredDebaters.filter(d => d.tier === 'High Tier').sort(sortFunction);
+        const midTier = filteredDebaters.filter(d => d.tier === 'Mid Tier').sort(sortFunction);
+        const lowTier = filteredDebaters.filter(d => d.tier === 'Low Tier').sort(sortFunction);
+
+        function populateTable(tbody, list) {
+            tbody.innerHTML = ''; // Clear previous content
+            list.forEach((d, i) => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${i + 1}</td>
+                        <td><img src="${getSafeImagePath(d.photo)}" width="40" class="rounded-circle" alt="${d.name}"></td>
+                        <td>${d.name}</td>
+                        <td><img src="${getSafeImagePath(d.flag)}" width="20" class="me-1" alt="${d.country_code}"> ${d.country_code}</td>
+                        <td><span class="badge ${d.wins > d.losses ? 'bg-success' : 'bg-danger'}">${d.record}</span></td>
+                    </tr>
+                `;
+            });
+            // Add empty rows if less than 5
+            for (let i = list.length; i < 5; i++) {
+                tbody.innerHTML += `<tr><td>${i + 1}</td><td></td><td></td><td></td><td></td></tr>`;
+            }
+        }
+
+        populateTable(highTierBody, highTier);
+        populateTable(midTierBody, midTier);
+        populateTable(lowTierBody, lowTier);
+
+        // Update sort icons
+        document.querySelectorAll('.table thead th[data-sort]').forEach(th => {
+            const icon = th.querySelector('.sort-icon');
+            if (icon) {
+                icon.classList.remove('fa-sort-up', 'fa-sort-down', 'fa-sort');
+                if (th.dataset.sort === sortColumn) {
+                    icon.classList.add(sortOrder === 'asc' ? 'fa-sort-up' : 'fa-sort-down');
                 } else {
-                    matchesHtml = `<div class="col-12"><p class="text-center text-muted">No match history available for this debater.</p></div>`;
-                    individualFullMatchHistorySection.innerHTML = matchesHtml;
+                    icon.classList.add('fa-sort');
                 }
             }
-        }
+        });
+    }
 
-        function renderComparePageContent(debaters) {
-            console.log("Rendering Compare Page Content..."); // Debugging
-            const comparePageHtml = `
-                <section class="container my-5 animate__animated animate__fadeIn">
-                    <h2 class="text-center mb-4 fw-bold text-uppercase">Compare Debaters <i class="fas fa-balance-scale-right ms-2"></i></h2>
-                    <div class="row justify-content-center mb-4">
-                        <div class="col-md-5">
-                            <select class="form-select mb-2" id="debaterSelect1" aria-label="Select first debater">
-                                <option value="">Select Debater 1</option>
-                                ${debaters.map(d => `<option value="${d.id}">${d.name}</option>`).join('')}
-                            </select>
-                        </div>
-                        <div class="col-md-1 d-flex align-items-center justify-content-center">
-                            <i class="fas fa-times vs-icon"></i>
-                        </div>
-                        <div class="col-md-5">
-                            <select class="form-select mb-2" id="debaterSelect2" aria-label="Select second debater">
-                                <option value="">Select Debater 2</option>
-                                ${debaters.map(d => `<option value="${d.id}">${d.name}</option>`).join('')}
-                            </select>
-                        </div>
-                    </div>
-                    <div class="row" id="comparisonResults">
-                        <div class="col-12 text-center text-muted animate__animated animate__fadeIn">
-                            <p><i class="fas fa-info-circle me-2"></i> Select two debaters above to compare their profiles.</p>
-                        </div>
-                    </div>
-                </section>
-            `;
-            setAppRootContent(comparePageHtml);
-            attachComparePageEventListeners(debaters);
-            // Destroy existing chart instances from other pages/sections
-            if (overallStatsChartInstance) {
-                overallStatsChartInstance.destroy();
-                overallStatsChartInstance = null;
-            }
-            if (radarChartInstance) {
-                radarChartInstance.destroy();
-                radarChartInstance = null;
-            }
-        }
+    function renderRecentMatches(matches) {
+        const recentMatchesSection = document.getElementById('recentMatchesSection');
+        if (!recentMatchesSection) return;
 
-        // --- Specific Section Renderers (for homepage sections) ---
-
-        function renderTopLowRecords(debaters) {
-            console.log("Rendering Top & Low Records section..."); // Debugging
-            const topLowRecordsSection = document.getElementById('topLowRecordsSection');
-            if (!topLowRecordsSection) return;
-
-            const sortedDebaters = [...debaters].sort((a, b) => {
-                const winRateA = (a.wins + a.losses) > 0 ? a.wins / (a.wins + a.losses) : 0;
-                const winRateB = (b.wins + b.losses) > 0 ? b.wins / (b.wins + b.losses) : 0;
-                if (winRateA !== winRateB) return winRateB - winRateA;
-                return (b.wins + b.losses) - (a.wins + a.losses);
-            });
-
-            const top3 = sortedDebaters.slice(0, 3);
-            const low3StartIndex = Math.max(0, sortedDebaters.length - 3);
-            const low3 = sortedDebaters.slice(low3StartIndex).filter(d => !top3.some(t => t.id === d.id)).reverse();
-
-            let html = `
-                <div class="col-md-6">
-                    <h3 class="mb-3 text-success">Top Record Debaters DBA <i class="fas fa-crown ms-2"></i></h3>
-                    <div class="row g-3">
-            `;
-            top3.forEach(debater => {
-                html += `
-                    <div class="col-md-4">
-                        <div class="card shadow h-100 animate__animated animate__fadeInUp" role="button" aria-label="View ${debater.name}'s profile" onclick="window.location.hash='#profile/${debater.id}'">
-                            <div class="card-body">
-                                <h4 class="card-title">${debater.name} <img src="${getSafeImagePath(debater.flag)}" width="24" class="ms-2" alt="${debater.country_code}"/></h4>
-                                <p class="card-text">Record: <span class="badge ${debater.wins > debater.losses ? 'bg-success' : 'bg-danger'}">${debater.record}</span></p>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            });
+        let html = '';
+        const sortedMatches = [...matches].sort((a,b) => (new Date(b.date || 0)) - (new Date(a.date || 0))); // Sort by date
+        
+        sortedMatches.slice(0, 3).forEach(match => {
             html += `
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <h3 class="mb-3 text-danger">Low Record Debaters DBA <i class="fas fa-arrow-down ms-2"></i></h3>
-                    <div class="row g-3">
-            `;
-            low3.forEach(debater => {
-                html += `
-                    <div class="col-md-4">
-                        <div class="card shadow h-100 animate__animated animate__fadeInUp" role="button" aria-label="View ${debater.name}'s profile" onclick="window.location.hash='#profile/${debater.id}'">
-                            <div class="card-body">
-                                <h4 class="card-title">${debater.name} <img src="${getSafeImagePath(debater.flag)}" width="24" class="ms-2" alt="${debater.country_code}"/></h4>
-                                <p class="card-text">Record: <span class="badge ${debater.wins > debater.losses ? 'bg-danger' : 'bg-success'}">${debater.record}</span></p>
-                            </div>
+                <div class="col-lg-4 col-md-6 col-sm-12">
+                    <div class="card match-card">
+                        <img src="${getSafeImagePath(match.image)}" class="match-img-16by9 card-img-top" alt="${match.debater1.name} vs ${match.debater2.name}">
+                        <div class="card-body text-center">
+                            <h5 class="card-title fw-bold">Indonesia 🇮🇩 vs Malaysia 🇲🇾</h5>
+                            <p class="mb-1"><strong>${match.debater1.name} (${match.debater1.character})</strong> <span class="badge ${match.winner === match.debater1.name ? 'bg-success' : 'bg-danger'}">WIN</span></p> 
+                            <p class="mb-0"><strong>${match.debater2.name} (${match.debater2.character})</strong> <span class="badge ${match.winner === match.debater2.name ? 'bg-danger' : 'bg-success'}">LOSS</span></p>
                         </div>
-                    </div>
-                `;
-            });
-            html += `
                     </div>
                 </div>
             `;
-            topLowRecordsSection.innerHTML = html;
-        }
+        });
+        recentMatchesSection.innerHTML = html;
+    }
 
-        function renderQuickViewProfiles(debaters) {
-            console.log("Rendering Quick View Profiles section..."); // Debugging
-            const quickViewProfilesSection = document.getElementById('quickViewProfiles');
-            if (!quickViewProfilesSection) return;
+    function renderIndividualMatchHistory(debaters, matches) {
+        const individualMatchHistorySection = document.getElementById('individualMatchHistory');
+        if (!individualMatchHistorySection) return;
 
-            let html = '';
-            debaters.slice(0, 3).forEach(debater => { // Showing first 3 for quick view
-                html += `
-                    <div class="col-md-4">
-                        <div class="card shadow h-100 text-center animate__animated animate__fadeInUp" aria-label="View quick summary of ${debater.name}">
-                            <img src="${getSafeImagePath(debater.photo)}" class="card-img-top" alt="${debater.name}" loading="lazy"/>
-                            <div class="card-body">
-                                <h3 class="clickable-name" data-debater-id="${debater.id}" tabindex="0" role="button">
-                                    ${debater.name} <img src="${getSafeImagePath(debater.flag)}" width="24" class="ms-2" alt="${debater.country_code}"/>
-                                </h3>
-                                <p class="card-text">Record: <span class="badge ${debater.wins > debater.losses ? 'bg-success' : 'bg-danger'}">${debater.record}</span></p>
-                                <div id="${debater.id}-desc" class="debater-desc">
-                                    <p><strong>Character:</strong> ${debater.character}</p>
-                                    <p><strong>Summary:</strong> ${debater.summary}</p>
-                                </div>
+        let html = '';
+        const relevantDebaters = debaters.filter(d => matches.some(m => m.debater1.id === d.id || m.debater2.id === d.id)).slice(0,3);
+
+        relevantDebaters.forEach(debater => {
+            const latestMatch = matches.find(m => m.debater1.id === debater.id || m.debater2.id === debater.id);
+            if (!latestMatch) return;
+
+            const isWinner = latestMatch.winner === debater.name;
+            const opponent = latestMatch.debater1.id === debater.id ? latestMatch.debater2 : latestMatch.debater1;
+            const cardClass = isWinner ? 'bg-success' : 'bg-danger';
+
+            html += `
+                <div class="col-md-4">
+                    <div class="card mb-3 shadow" style="background-color: ${cardClass === 'bg-success' ? '#e6ffe6' : '#ffe6e6'};">
+                        <div class="card-body d-flex align-items-center">
+                            <img src="${getSafeImagePath(debater.photo)}" width="60" class="me-3 rounded debater-thumbnail" alt="${debater.name}">
+                            <div>
+                                <h5 class="mb-1 fw-bold">${debater.name} <img src="${getSafeImagePath(debater.flag)}" width="20" class="ms-1 flag-icon" alt="${debater.country_code}"></h5>
+                                <p class="mb-1">Record: <span class="badge ${cardClass}">${debater.record}</span></p>
+                                <p class="mb-0">${isWinner ? 'Win' : 'Loss'} vs ${opponent.name} [${latestMatch.method}]</p>
                             </div>
                         </div>
                     </div>
-                `;
-            });
-            quickViewProfilesSection.innerHTML = html;
+                </div>
+            `;
+        });
+        individualMatchHistorySection.innerHTML = html;
+    }
 
-            quickViewProfilesSection.querySelectorAll('.clickable-name').forEach(element => {
-                element.addEventListener('click', () => {
-                    const debaterId = element.dataset.debaterId;
-                    const descElement = document.getElementById(`${debaterId}-desc`);
-                    if (descElement) {
-                        descElement.classList.toggle('show');
-                        element.setAttribute('aria-expanded', descElement.classList.contains('show'));
-                    }
-                });
-                element.addEventListener('keypress', (e) => { // For keyboard accessibility
-                    if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        element.click();
-                    }
-                });
-            });
-        }
+    function renderCompareDebatersSection(debaters) {
+        const compareSection = document.getElementById('compare-section-id');
+        if (!compareSection) return;
 
-        function renderDetailedProfiles(allDebaters, filterQuery = '') {
-            console.log("Rendering Detailed Profiles section with query:", filterQuery); // Debugging
-            const detailedProfilesSection = document.getElementById('detailedProfilesSection');
-            if (!detailedProfilesSection) return;
+        let debaterOptionsHtml = debaters.map(d => `<option value="${d.id}">${d.name}</option>`).join('');
 
-            const query = filterQuery.trim().toLowerCase();
+        // Re-construct the entire section dynamically to ensure fresh event listeners
+        compareSection.innerHTML = `
+            <h2 class="text-center fw-bold text-uppercase mb-4">Compare Debaters</h2>
+            <div class="row justify-content-center mb-4">
+                <div class="col-md-5">
+                    <select class="form-select mb-2" id="debaterSelect1" aria-label="Select first debater">
+                        <option value="">Select Debater 1</option>
+                        ${debaterOptionsHtml}
+                    </select>
+                </div>
+                <div class="col-md-1 d-flex align-items-center justify-content-center">
+                    <span class="vs-text">VS</span>
+                </div>
+                <div class="col-md-5">
+                    <select class="form-select mb-2" id="debaterSelect2" aria-label="Select second debater">
+                        <option value="">Select Debater 2</option>
+                        ${debaterOptionsHtml}
+                    </select>
+                </div>
+            </div>
+            <div class="row" id="comparisonResults">
+                <div class="col-12 text-center text-muted">
+                    <p>Select two debaters above to compare their profiles.</p>
+                </div>
+            </div>
+        `;
 
-            if (query === '') {
-                detailedProfilesSection.innerHTML = `
-                    <div class="col-12 text-center text-muted animate__animated animate__fadeIn">
-                        <p><i class="fas fa-search me-2"></i> Ketik nama debater di atas untuk melihat metrik profil lengkap mereka.</p>
-                    </div>
-                `;
-                return;
-            }
+        const debaterSelect1 = document.getElementById('debaterSelect1');
+        const debaterSelect2 = document.getElementById('debaterSelect2');
 
-            const filteredDebaters = allDebaters.filter(debater =>
-                debater.name.toLowerCase().includes(query)
-            );
+        const updateComparison = () => {
+            const id1 = debaterSelect1.value;
+            const id2 = debaterSelect2.value;
 
-            if (filteredDebaters.length === 0) {
-                detailedProfilesSection.innerHTML = `
-                    <div class="col-12 text-center text-muted animate__animated animate__fadeIn">
-                        <p><i class="fas fa-exclamation-circle me-2"></i> Tidak ada debater yang ditemukan dengan nama "${filterQuery}".</p>
-                    </div>
-                `;
-                return;
-            }
+            const debater1 = debaters.find(d => d.id === id1);
+            const debater2 = debaters.find(d => d.id === id2);
 
-            let html = '';
-            filteredDebaters.forEach(debater => {
-                let metricsHtml = '';
-                for (const [metricName, metricScore] of Object.entries(debater.metrics)) {
-                    const widthPercentage = (parseFloat(metricScore) / 10) * 100;
-                    metricsHtml += `
-                        <div class="profile-metric">
-                            <span>${metricName}:</span>
-                            <div class="progress flex-grow-1" role="progressbar" aria-label="${metricName} score" aria-valuenow="${metricScore}" aria-valuemin="0" aria-valuemax="10">
-                                <div class="progress-bar" style="width: ${widthPercentage}%;"></div>
-                            </div>
-                            <span class="metric-value">${metricScore}/10</span>
-                        </div>
-                    `;
-                }
-
-                html += `
-                    <div class="col-lg-4 col-md-6 animate__animated animate__fadeInUp">
-                        <div class="card h-100">
-                            <img src="${getSafeImagePath(debater.photo)}" class="card-img-top profile-avatar" alt="${debater.name} Profile" loading="lazy">
-                            <div class="card-body">
-                                <h3 class="profile-name">
-                                    <a href="#profile/${debater.id}" class="text-decoration-none">${debater.name}</a>
-                                    <img src="${getSafeImagePath(debater.flag)}" width="24" class="ms-2" alt="${debater.country_code}"/>
-                                </h3>
-                                <p class="profile-record">Record: <span class="badge ${debater.wins > debater.losses ? 'bg-success' : 'bg-danger'}">${debater.record}</span></p>
-                                <div class="profile-metrics">
-                                    ${metricsHtml}
-                                </div>
-                                <div class="profile-detail mt-3">
-                                    <p><strong>Favorite Character:</strong> ${debater.character}</p>
-                                    <p><strong>Bio:</strong> ${debater.bio}</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            });
-            detailedProfilesSection.innerHTML = html;
-        }
-
-        function renderLeaderboard(debaters, query = '', filterTier = '', filterCountry = '', sortColumn = 'rank', sortOrder = 'asc') {
-            console.log("Rendering Leaderboard section with query:", query, "tier:", filterTier, "country:", filterCountry, "sort:", sortColumn, sortOrder); // Debugging
-            const highTierBody = document.getElementById('highTierBody');
-            const midTierBody = document.getElementById('midTierBody');
-            const lowTierBody = document.getElementById('lowTierBody');
-
-            if (!highTierBody || !midTierBody || !lowTierBody) return;
-
-            highTierBody.innerHTML = '';
-            midTierBody.innerHTML = '';
-            lowTierBody.innerHTML = '';
-
-            let filteredDebaters = debaters.filter(debater =>
-                (query === '' || debater.name.toLowerCase().includes(query.toLowerCase()) || debater.country.toLowerCase().includes(query.toLowerCase()) || debater.country_code.toLowerCase().includes(query.toLowerCase())) &&
-                (filterTier === '' || debater.tier === filterTier) &&
-                (filterCountry === '' || debater.country === filterCountry)
-            );
-
-            function sortTier(tierList) {
-                return tierList.sort((a, b) => {
-                    let valA, valB;
-                    if (sortColumn === 'rank' || sortColumn === 'wins') { 
-                        valA = a.wins;
-                        valB = b.wins;
-                    } else if (sortColumn === 'name' || sortColumn === 'country') {
-                        valA = a[sortColumn];
-                        valB = b[sortColumn];
-                    } else { // Fallback to sorting by name if column is unknown
-                        valA = a.name;
-                        valB = b.name;
-                    }
-
-                    if (typeof valA === 'string') {
-                        return sortOrder === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
-                    } else {
-                        return sortOrder === 'asc' ? valA - valB : valB - valA;
-                    }
-                });
-            }
-
-            const highTier = sortTier(filteredDebaters.filter(d => d.tier === 'High Tier'));
-            const midTier = sortTier(filteredDebaters.filter(d => d.tier === 'Mid Tier'));
-            const lowTier = sortTier(filteredDebaters.filter(d => d.tier === 'Low Tier'));
-
-            function populateTier(tbody, tierList) {
-                if (tierList.length === 0 && (query !== '' || filterTier !== '' || filterCountry !== '')) {
-                    tbody.innerHTML = `<tr><td colspan="5" class="text-muted">No debaters found in this tier matching your filters.</td></tr>`;
-                    return;
-                }
-                const minRows = Math.max(tierList.length, 5); // Ensure at least 5 rows for appearance
-                for (let i = 0; i < minRows; i++) {
-                    const debater = tierList[i];
-                    if (debater) {
-                        tbody.innerHTML += `
-                            <tr>
-                                <td>${i + 1}</td>
-                                <td><img src="${getSafeImagePath(debater.photo)}" width="40" class="rounded-circle" alt="${debater.name}" loading="lazy"></td>
-                                <td><a href="#profile/${debater.id}" class="text-decoration-none">${debater.name}</a></td>
-                                <td><img src="${getSafeImagePath(debater.flag)}" width="20" class="me-1" alt="${debater.country_code}"> ${debater.country_code}</td>
-                                <td><span class="badge ${debater.wins > debater.losses ? 'bg-success' : 'bg-danger'}">${debater.record}</span></td>
-                            </tr>
-                        `;
-                    } else {
-                        tbody.innerHTML += `<tr><td>${i + 1}</td><td></td><td></td><td></td><td></td></tr>`;
-                    }
-                }
-            }
-
-            populateTier(highTierBody, highTier);
-            populateTier(midTierBody, midTier);
-            populateTier(lowTierBody, lowTier);
-
-            // Update sort icons and aria-sort attributes
-            document.querySelectorAll('.table thead th[data-sort]').forEach(th => {
-                const icon = th.querySelector('.sort-icon');
-                if (icon) {
-                    icon.classList.remove('fa-sort-up', 'fa-sort-down', 'fa-sort');
-                    if (th.dataset.sort === sortColumn) {
-                        icon.classList.add(sortOrder === 'asc' ? 'fa-sort-up' : 'fa-sort-down');
-                        th.setAttribute('aria-sort', sortOrder === 'asc' ? 'ascending' : 'descending');
-                    } else {
-                        th.classList.add('sortable'); // Add a class for sortable headers
-                        icon.classList.add('fa-sort');
-                        th.setAttribute('aria-sort', 'none');
-                    }
-                }
-            });
-        }
-
-        // Render Overall Stats Chart (Bar Chart for homepage)
-        function renderOverallStatsChart(debaters) {
-            console.log("Rendering Overall Stats Chart...");
-            const ctx = document.getElementById('overallStatsChart');
-            if (!ctx) return;
-
-            if (overallStatsChartInstance) { // Destroy previous chart instance if it exists
-                overallStatsChartInstance.destroy();
-                overallStatsChartInstance = null;
-            }
-
-            const tierCounts = debaters.reduce((acc, debater) => {
-                acc[debater.tier] = (acc[debater.tier] || 0) + 1;
-                return acc;
-            }, {});
-
-            overallStatsChartInstance = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: Object.keys(tierCounts),
-                    datasets: [
-                        {
-                            label: 'Debaters per Tier',
-                            data: Object.values(tierCounts),
-                            backgroundColor: ['#ffc107', '#6c757d', '#343a40'],
-                            borderColor: ['#e0a800', '#5a6268', '#23272b'],
-                            borderWidth: 1
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        title: {
-                            display: true,
-                            text: 'Debaters Distribution by Tier',
-                            font: { size: 16, family: 'Poppins' }
-                        },
-                        legend: { display: false }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: { stepSize: 1 },
-                            grid: { display: false }
-                        },
-                        x: {
-                            grid: { display: false }
-                        }
-                    }
-                }
-            });
-        }
-
-        function renderRecentMatches(matches) {
-            console.log("Rendering Recent Matches section...");
-            const recentMatchesSection = document.getElementById('recentMatchesSection');
-            if (!recentMatchesSection) return;
-
-            let html = '';
-            const sortedMatches = [...matches].sort((a, b) => {
-                const dateA = a.date ? new Date(a.date) : 0;
-                const dateB = b.date ? new Date(b.date) : 0;
-                if (dateA && dateB) return dateB - dateA;
-                return b.id.localeCompare(a.id);
-            });
-
-            sortedMatches.slice(0, 3).forEach(match => {
-                html += `
-                    <div class="col-lg-4 col-md-6 col-sm-12 animate__animated animate__fadeInUp">
-                        <div class="card match-card">
-                            <img src="${getSafeImagePath(match.image)}" class="match-img-16by9 card-img-top" alt="${match.debater1.name} vs ${match.debater2.name}" loading="lazy">
-                            <div class="card-body text-center">
-                                <h5 class="card-title fw-bold">
-                                    ${match.country1_flag} <i class="fas fa-fist-raised mx-2" style="color:#FFD700;"></i> ${match.country2_flag}
-                                </h5>
-                                <div class="debater-info">
-                                    <strong>${match.debater1.name} (${match.debater1.character})</strong> <span class="badge ${match.winner === match.debater1.name ? 'bg-success' : 'bg-danger'}">${match.winner === match.debater1.name ? 'WIN' : 'LOSS'}</span>
-                                </div>
-                                <div class="debater-info">
-                                    <strong>${match.debater2.name} (${match.debater2.character})</strong> <span class="badge ${match.winner === match.debater2.name ? 'bg-success' : 'bg-danger'}">${match.winner === match.debater2.name ? 'WIN' : 'LOSS'}</span>
-                                </div>
-                                <small class="text-muted mt-2 d-block">Method: ${match.method} ${match.event ? `(Event: ${match.event})` : ''}</small>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            });
-            recentMatchesSection.innerHTML = html;
-        }
-
-        function renderIndividualMatchHistory(debaters, matches) {
-            console.log("Rendering Individual Match History section..."); // Debugging
-            const individualMatchHistorySection = document.getElementById('individualMatchHistory');
-            if (!individualMatchHistorySection) return;
-
-            let html = '';
-            const debatersWithMatches = debaters.filter(d => matches.some(m => m.debater1.id === d.id || m.debater2.id === d.id)).slice(0,3);
-
-            debatersWithMatches.forEach(debater => {
-                const debaterMatches = matches.filter(match =>
-                    match.debater1.id === debater.id || match.debater2.id === debater.id
-                ).sort((a, b) => {
-                    const dateA = a.date ? new Date(a.date) : 0;
-                    const dateB = b.date ? new Date(b.date) : 0;
-                    if (dateA && dateB) return dateB - dateA;
-                    return b.id.localeCompare(a.id);
-                });
-
-                if (debaterMatches.length > 0) {
-                    const latestMatch = debaterMatches[0];
-                    const isWinner = latestMatch.winner === debater.name;
-                    const opponent = latestMatch.debater1.id === debater.id ? latestMatch.debater2 : latestMatch.debater1;
-                    const statusText = isWinner ? 'Win' : 'Loss';
-                    const cardClass = isWinner ? 'win-card' : 'loss-card';
-                    
-                    const opponentDebater = debaters.find(d => d.id === opponent.id);
-                    const opponentPhoto = getSafeImagePath(opponentDebater ? opponentDebater.photo : '');
-
-                    html += `
-                        <div class="col-md-6 animate__animated animate__fadeInUp">
-                            <div class="card shadow ${cardClass}">
-                                <div class="card-body d-flex align-items-center">
-                                    <img src="${getSafeImagePath(debater.photo)}" class="me-3 rounded debater-thumbnail" alt="${debater.name}" loading="lazy">
-                                    <div class="flex-grow-1">
-                                        <h5 class="fw-bold">${debater.name} <img src="${getSafeImagePath(debater.flag)}" width="20" class="ms-1" alt="${debater.country_code}"></h5>
-                                        <p class="mb-1">Record: <span class="badge ${debater.wins > debater.losses ? 'bg-success' : 'bg-danger'}">${debater.record}</span></p>
-                                        <p class="mb-0">${statusText} vs ${opponent.name} [${latestMatch.method}]</p>
-                                    </div>
-                                    <img src="${opponentPhoto}" width="40" class="ms-3 rounded-circle" alt="${opponent.name}" loading="lazy">
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                }
-            });
-            individualMatchHistorySection.innerHTML = html;
-        }
-
-        // --- Event Listener Attachments (for homepage sections) ---
-
-        function attachHomePageEventListeners(debaters, matches) {
-            console.log("Attaching Home Page Event Listeners...");
-            // Leaderboard Search & Filters
-            const leaderboardSearchInput = document.getElementById('leaderboardSearch');
-            const tierFilterSelect = document.getElementById('tierFilter');
-            const countryFilterSelect = document.getElementById('countryFilter');
-
-            const applyLeaderboardFilters = () => {
-                console.log("Applying Leaderboard Filters via Event Listener.");
-                const query = leaderboardSearchInput ? leaderboardSearchInput.value : '';
-                const tier = tierFilterSelect ? tierFilterSelect.value : '';
-                const country = countryFilterSelect ? countryFilterSelect.value : '';
-                renderLeaderboard(debaters, query, tier, country, currentLeaderboardSort.column, currentLeaderboardSort.order);
-            };
-
-            if (leaderboardSearchInput) leaderboardSearchInput.addEventListener('keyup', applyLeaderboardFilters);
-            if (tierFilterSelect) tierFilterSelect.addEventListener('change', applyLeaderboardFilters);
-            if (countryFilterSelect) countryFilterSelect.addEventListener('change', applyLeaderboardFilters);
-
-            // Debater Profile Search
-            const debaterProfileSearchInput = document.getElementById('debaterProfileSearch');
-            if (debaterProfileSearchInput) {
-                debaterProfileSearchInput.addEventListener('keyup', (event) => {
-                    renderDetailedProfiles(debaters, event.target.value);
-                });
-            }
-
-            // Quick View Profile toggle description (re-attach because HTML is re-rendered)
-            document.querySelectorAll('#quickViewProfiles .clickable-name').forEach(element => {
-                element.addEventListener('click', () => {
-                    const debaterId = element.dataset.debaterId;
-                    const descElement = document.getElementById(`${debaterId}-desc`);
-                    if (descElement) {
-                        descElement.classList.toggle('show');
-                        element.setAttribute('aria-expanded', descElement.classList.contains('show'));
-                    }
-                });
-                element.addEventListener('keypress', (e) => { // For keyboard accessibility
-                    if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        element.click();
-                    }
-                });
-            });
-
-            // Leaderboard Sorting
-            document.querySelectorAll('.table thead th[data-sort]').forEach(header => {
-                header.addEventListener('click', () => {
-                    const sortColumn = header.dataset.sort;
-                    if (currentLeaderboardSort.column === sortColumn) {
-                        currentLeaderboardSort.order = currentLeaderboardSort.order === 'asc' ? 'desc' : 'asc';
-                    } else {
-                        currentLeaderboardSort.column = sortColumn;
-                        currentLeaderboardSort.order = 'asc';
-                    }
-                    applyLeaderboardFilters();
-                });
-            });
-        }
-
-        // Attach event listeners for profile.html specific elements
-        function attachProfilePageEventListeners(debaters, matches) {
-            console.log("Attaching Profile Page Event Listeners...");
-            // No specific event listeners needed here other than chart rendering done directly in renderProfilePage
-            // And back button handled by basic HTML link.
-        }
-
-        function attachComparePageEventListeners(debaters) {
-            console.log("Attaching Compare Page Event Listeners...");
-            const debaterSelect1 = document.getElementById('debaterSelect1');
-            const debaterSelect2 = document.getElementById('debaterSelect2');
-
-            const updateComparison = () => {
-                const id1 = debaterSelect1.value;
-                const id2 = debater2.value; // Corrected ID variable
-                
-                const debater1 = debaters.find(d => d.id === id1);
-                const debater2 = debaters.find(d => d.id === id2);
-
-                if (id1 && id2 && id1 === id2) {
-                    showToast('Please select two different debaters for comparison.', 'warning');
-                    if (comparisonChartInstance) { // Destroy existing chart if same debaters chosen
-                        comparisonChartInstance.destroy();
-                        comparisonChartInstance = null;
-                    }
-                    document.getElementById('comparisonResults').innerHTML = `
-                        <div class="col-12 text-center text-muted animate__animated animate__fadeIn">
-                            <p><i class="fas fa-info-circle me-2"></i> Select two DIFFERENT debaters to compare their profiles.</p>
-                        </div>
-                    `;
-                    return;
-                }
-                renderComparisonChart(debater1, debater2);
-            };
-
-            if (debaterSelect1) debaterSelect1.addEventListener('change', updateComparison);
-            if (debaterSelect2) debaterSelect2.addEventListener('change', updateComparison);
-        }
-
-        function renderComparisonChart(debater1, debater2) {
             const comparisonResultsDiv = document.getElementById('comparisonResults');
             if (!comparisonResultsDiv) return;
 
-            // Destroy previous chart instance if exists
-            if (comparisonChartInstance) {
-                comparisonChartInstance.destroy();
-                comparisonChartInstance = null;
-            }
-
             if (!debater1 || !debater2) {
-                comparisonResultsDiv.innerHTML = `
-                    <div class="col-12 text-center text-muted animate__animated animate__fadeIn">
-                        <p><i class="fas fa-info-circle me-2"></i> Select two debaters above to compare their profiles.</p>
-                    </div>
-                `;
+                comparisonResultsDiv.innerHTML = `<div class="col-12 text-center text-muted"><p>Select two debaters above to compare their profiles.</p></div>`;
+                return;
+            }
+            if (id1 === id2) {
+                showToast('Please select two different debaters for comparison.', 'warning');
+                comparisonResultsDiv.innerHTML = `<div class="col-12 text-center text-muted"><p>Select two DIFFERENT debaters to compare their profiles.</p></div>`;
                 return;
             }
 
-            const labels = Object.keys(debater1.metrics);
-            const data1 = Object.values(debater1.metrics).map(score => parseFloat(score));
-            const data2 = Object.values(debater2.metrics).map(score => parseFloat(score));
-
-            const comparisonHtml = `
-                <div class="col-12 text-center animate__animated animate__fadeIn">
-                    <h4 class="mb-4">Metrics Comparison</h4>
-                    <div class="comparison-chart-container">
-                        <canvas id="comparisonRadarChart" height="300"></canvas>
-                    </div>
-                </div>
-                <div class="col-md-6 mt-4 debater-compare-card animate__animated animate__fadeInLeft">
-                    <div class="card shadow p-3 h-100">
-                        <img src="${getSafeImagePath(debater1.photo)}" class="profile-avatar mb-2" alt="${debater1.name}">
-                        <h5>${debater1.name} <img src="${getSafeImagePath(debater1.flag)}" width="20" class="ms-1" alt="${debater1.country_code}"></h5>
-                        <p class="mb-1">Record: <span class="badge ${debater1.wins > debater1.losses ? 'bg-success' : 'bg-danger'}">${debater1.record}</span></p>
-                        <p class="text-muted"><i class="fas fa-percentage me-1"></i> Win Rate: ${((debater1.wins / (debater1.wins + debater1.losses)) * 100).toFixed(2)}%</p>
-                        <hr>
-                        <small><strong>Favorite Character:</strong> ${debater1.character}</small>
-                    </div>
-                </div>
-                <div class="col-md-6 mt-4 debater-compare-card animate__animated animate__fadeInRight">
-                    <div class="card shadow p-3 h-100">
-                        <img src="${getSafeImagePath(debater2.photo)}" class="profile-avatar mb-2" alt="${debater2.name}">
-                        <h5>${debater2.name} <img src="${getSafeImagePath(debater2.flag)}" width="20" class="ms-1" alt="${debater2.country_code}"></h5>
-                        <p class="mb-1">Record: <span class="badge ${debater2.wins > debater2.losses ? 'bg-success' : 'bg-danger'}">${debater2.record}</span></p>
-                        <p class="text-muted"><i class="fas fa-percentage me-1"></i> Win Rate: ${((debater2.wins / (debater2.wins + debater2.losses)) * 100).toFixed(2)}%</p>
-                        <hr>
-                        <small><strong>Favorite Character:</strong> ${debater2.character}</small>
-                    </div>
-                </div>
-                <div class="col-12 mt-4 animate__animated animate__fadeInUp">
-                    <h4 class="text-center mb-3">Head-to-Head Matches <i class="fas fa-handshake ms-2"></i></h4>
-                    <div class="row g-3 profile-match-history" id="headToHeadMatches">
-                        </div>
-                </div>
+            // Generate comparison table dynamically
+            let comparisonTableHtml = `
+                <div class="col-12 mt-4">
+                    <table class="table table-bordered table-striped metric-table">
+                        <thead>
+                            <tr>
+                                <th>Metric</th>
+                                <th>${debater1.name}</th>
+                                <th>${debater2.name}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
             `;
-            comparisonResultsDiv.innerHTML = comparisonHtml;
+            for (const metricName of Object.keys(debater1.metrics)) {
+                const score1 = debater1.metrics[metricName];
+                const score2 = debater2.metrics[metricName];
+                const badgeClass1 = parseFloat(score1) >= 7 ? 'bg-primary' : (parseFloat(score1) >= 4 ? 'bg-warning' : 'bg-secondary');
+                const badgeClass2 = parseFloat(score2) >= 7 ? 'bg-primary' : (parseFloat(score2) >= 4 ? 'bg-warning' : 'bg-secondary');
 
-            // Render the radar chart
-            const ctx = document.getElementById('comparisonRadarChart');
-            if (ctx) {
-                comparisonChartInstance = new Chart(ctx, {
-                    type: 'radar',
-                    data: {
-                        labels: labels,
-                        datasets: [
-                            {
-                                label: debater1.name,
-                                data: data1,
-                                backgroundColor: 'rgba(13, 110, 253, 0.2)', // Blue
-                                borderColor: 'rgba(13, 110, 253, 1)',
-                                borderWidth: 1,
-                                pointBackgroundColor: 'rgba(13, 110, 253, 1)',
-                                pointBorderColor: '#fff',
-                                pointHoverBackgroundColor: '#fff',
-                                pointHoverBorderColor: 'rgba(13, 110, 253, 1)'
-                            },
-                            {
-                                label: debater2.name,
-                                data: data2,
-                                backgroundColor: 'rgba(255, 99, 132, 0.2)', // Red
-                                borderColor: 'rgba(255, 99, 132, 1)',
-                                borderWidth: 1,
-                                pointBackgroundColor: 'rgba(255, 99, 132, 1)',
-                                pointBorderColor: '#fff',
-                                pointHoverBackgroundColor: '#fff',
-                                pointHoverBorderColor: 'rgba(255, 99, 132, 1)'
-                            }
-                        ]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        scales: {
-                            r: {
-                                angleLines: { display: false },
-                                suggestedMin: 0,
-                                suggestedMax: 10,
-                                ticks: { stepSize: 2, backdropColor: 'transparent', color: '#6c757d' },
-                                pointLabels: { color: '#212529', font: { size: 12 } },
-                                grid: { color: 'rgba(0,0,0,0.1)' }
-                            }
-                        },
-                        plugins: {
-                            legend: { position: 'top' },
-                            tooltip: {
-                                callbacks: {
-                                    label: function(context) {
-                                        return context.dataset.label + ': ' + context.raw + '/10';
-                                    }
-                                }
-                            }
-                        },
-                        elements: {
-                            line: { tension: 0.2 }
-                        }
-                    }
-                });
+                comparisonTableHtml += `
+                    <tr>
+                        <td class="metric-name">${metricName}</td>
+                        <td><span class="badge ${badgeClass1} score-badge">${score1}/10</span></td>
+                        <td><span class="badge ${badgeClass2} score-badge">${score2}/10</span></td>
+                    </tr>
+                `;
             }
+            comparisonTableHtml += `</tbody></table></div>`;
+            comparisonResultsDiv.innerHTML = comparisonTableHtml;
+        };
 
-            // Render head-to-head matches
-            const headToHeadMatchesDiv = document.getElementById('headToHeadMatches');
-            if (headToHeadMatchesDiv) {
-                const h2hMatches = allMatchesData.filter(match =>
-                    (match.debater1.id === debater1.id && match.debater2.id === debater2.id) ||
-                    (match.debater1.id === debater2.id && match.debater2.id === debater1.id)
-                ).sort((a, b) => {
-                    const dateA = a.date ? new Date(a.date) : 0;
-                    const dateB = b.date ? new Date(b.date) : 0;
-                    if (dateA && dateB) return dateB - dateA;
-                    return b.id.localeCompare(a.id);
-                });
+        debaterSelect1.addEventListener('change', updateComparison);
+        debaterSelect2.addEventListener('change', updateComparison);
+    }
 
-                let h2hHtml = '';
-                if (h2hMatches.length > 0) {
-                    h2hMatches.forEach(match => {
-                        const winnerDebater = allDebatersData.find(d => d.name === match.winner); // Get full debater object
-                        const loserDebaterId = match.winner === match.debater1.name ? match.debater2.id : match.debater1.id;
-                        const loserDebater = allDebatersData.find(d => d.id === loserDebaterId);
+    // --- Initial Load & Event Attachments ---
 
-                        const winnerPhoto = getSafeImagePath(winnerDebater ? winnerDebater.photo : '');
-                        const loserPhoto = getSafeImagePath(loserDebater ? loserDebater.photo : '');
+    async function initializePage() {
+        console.log("Initializing page...");
+        const data = await fetchData(); // Fetch data once
+        if (!data) return; // If data fetch failed, stop.
 
-                        const matchDate = match.date ? new Date(match.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'Unknown Date';
+        // Render all static-like sections immediately
+        renderTopLowRecords(data.debaters);
+        renderQuickViewProfiles(data.debaters);
+        renderRecentMatches(data.matches);
+        renderIndividualMatchHistory(data.debaters, data.matches);
+        renderCompareDebatersSection(data.debaters); // Render comparison section
 
-                        h2hHtml += `
-                            <div class="col-12">
-                                <div class="card shadow p-3 mb-2 d-flex flex-row align-items-center animate__animated animate__fadeIn">
-                                    <img src="${winnerPhoto}" width="50" class="rounded-circle me-3" alt="${winnerDebater.name}" loading="lazy">
-                                    <div class="flex-grow-1">
-                                        <h6 class="mb-1 fw-bold">${winnerDebater.name} <span class="badge bg-success">WIN</span> vs ${loserDebater.name}</h6>
-                                        <small class="text-muted">Method: ${match.method} - Character: ${winnerDebater.character} vs ${loserDebater.character}</small><br>
-                                        <small class="text-muted"><i class="fas fa-calendar-alt me-1"></i> Date: ${matchDate} ${match.event ? `(Event: ${match.event})` : ''}</small>
-                                    </div>
-                                    <img src="${loserPhoto}" width="50" class="rounded-circle ms-3" alt="${loserDebater.name}" loading="lazy">
-                                </div>
-                            </div>
-                        `;
-                    });
+        // Render Leaderboard (which includes its own filtering/sorting)
+        renderLeaderboard(data.debaters);
+
+        // Render overall stats chart
+        renderOverallStatsChart(data.debaters);
+
+        // Attach all event listeners after everything is rendered
+        attachAllEventListeners(data.debaters, data.matches);
+
+        console.log("Page initialization complete.");
+    }
+
+    function attachAllEventListeners(debaters, matches) {
+        // Leaderboard Search & Filters
+        const leaderboardSearchInput = document.getElementById('leaderboardSearch');
+        const tierFilterSelect = document.getElementById('tierFilter');
+        const countryFilterSelect = document.getElementById('countryFilter');
+
+        const applyLeaderboardFilters = () => {
+            const query = leaderboardSearchInput ? leaderboardSearchInput.value : '';
+            const tier = tierFilterSelect ? tierFilterSelect.value : '';
+            const country = countryFilterSelect ? countryFilterSelect.value : '';
+            renderLeaderboard(debaters, query, tier, country, currentLeaderboardSort.column, currentLeaderboardSort.order);
+        };
+
+        if (leaderboardSearchInput) leaderboardSearchInput.addEventListener('keyup', applyLeaderboardFilters);
+        if (tierFilterSelect) tierFilterSelect.addEventListener('change', applyLeaderboardFilters);
+        if (countryFilterSelect) countryFilterSelect.addEventListener('change', applyLeaderboardFilters);
+
+        // Leaderboard Sorting (attached to thead, but handled by renderLeaderboard)
+        document.querySelectorAll('.table thead th[data-sort]').forEach(header => {
+            header.addEventListener('click', () => {
+                const sortColumn = header.dataset.sort;
+                if (currentLeaderboardSort.column === sortColumn) {
+                    currentLeaderboardSort.order = currentLeaderboardSort.order === 'asc' ? 'desc' : 'asc';
                 } else {
-                    h2hHtml = `<div class="col-12"><p class="text-center text-muted">No head-to-head matches found between ${debater1.name} and ${debater2.name}.</p></div>`;
+                    currentLeaderboardSort.column = sortColumn;
+                    currentLeaderboardSort.order = 'asc';
                 }
-                headToHeadMatchesDiv.innerHTML = h2hHtml;
-            }
-        }
+                applyLeaderboardFilters();
+            });
+        });
 
-        // --- Router Logic (Initial Page Load and Hash Changes) ---
-        function router() {
-            console.log("Router activated. Current hash:", window.location.hash);
-            const path = window.location.hash.slice(1) || 'home'; // Get path after # or default to 'home'
-            const [route, id] = path.split('/');
-
-            // Clear any previous chart instances when routing changes
-            if (overallStatsChartInstance) {
-                overallStatsChartInstance.destroy();
-                overallStatsChartInstance = null;
-            }
-            if (radarChartInstance) {
-                radarChartInstance.destroy();
-                radarChartInstance = null;
-            }
-            if (comparisonChartInstance) {
-                comparisonChartInstance.destroy();
-                comparisonChartInstance = null;
-            }
-        
-            // Fetch data (this is the only async part)
-            fetchData().then(data => {
-                if (!data) { // If fetchData failed, it already displayed an error. Just return.
-                    console.error("Data not available, cannot render page.");
-                    return;
-                }
-
-                // Determine which page to render
-                if (route === 'home' || route === '') {
-                    renderHomePageContent(data.debaters, data.matches);
-                    showToast('Welcome to Debater Battle Arena!', 'info');
-                } else if (route === 'profile' && id) {
-                    renderProfilePageContent(id, data.debaters, data.matches);
-                } else if (route === 'compare') {
-                    renderComparePageContent(data.debaters);
-                    showToast('Compare two debaters side-by-side!', 'info');
-                }
-                else {
-                    setAppRootContent(`
-                        <div class="container my-5 text-center text-danger animate__animated animate__fadeIn" role="alert">
-                            <i class="fas fa-exclamation-triangle fa-3x mb-3"></i>
-                            <h2>Page Not Found!</h2>
-                            <p>The page you are looking for does not exist.</p>
-                            <a href="#home" class="btn btn-primary mt-3" aria-label="Back to Home page"><i class="fas fa-arrow-left me-2"></i> Back to Home</a>
-                        </div>
-                    `);
-                    document.title = 'DBA - 404';
-                    showToast('Page not found!', 'error');
-                }
-                console.log("Routing completed for route:", route);
+        // Debater Profile Search (for "Debater Profile Metrics" section)
+        const debaterProfileSearchInput = document.getElementById('debaterProfileSearch');
+        if (debaterProfileSearchInput) {
+            debaterProfileSearchInput.addEventListener('keyup', (event) => {
+                renderDetailedProfiles(debaters, event.target.value);
             });
         }
+    }
 
-        // Listen for hash changes (e.g., when clicking #links)
-        window.addEventListener('hashchange', router);
-
-        // Initial route load (called once when DOM is ready)
-        router();
-    });
-    ```
+    // Call initializePage when the DOM is fully loaded
+    initializePage();
+});
