@@ -7,53 +7,568 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <link rel="stylesheet" href="style.css">
+  <style>
+    /* Custom CSS for the site */
+    body {
+      font-family: 'Roboto', sans-serif;
+      background-color: #f8f9fa;
+      color: #333;
+    }
+
+    h1, h2, h3, h4, h5, h6 {
+      font-family: 'Poppins', sans-serif;
+      color: #212529;
+    }
+
+    .hero-image-container {
+      position: relative;
+      width: 100%;
+      height: 400px; /* Fixed height for hero image container */
+      overflow: hidden;
+      border-bottom: 5px solid #0d6efd;
+    }
+
+    .hero-image-container img {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center;
+    }
+
+    .card {
+      border-radius: 10px;
+      overflow: hidden;
+      transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    }
+
+    .card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+    }
+
+    .badge {
+      font-size: 0.9em;
+      padding: 0.4em 0.8em;
+      border-radius: 0.5rem;
+      font-weight: 600;
+    }
+
+    .clickable-name {
+      cursor: pointer;
+      color: #0d6efd;
+      text-decoration: underline;
+      transition: color 0.2s;
+      font-weight: 600;
+    }
+
+    .clickable-name:hover {
+      color: #0a58ca;
+    }
+
+    .debater-desc {
+      display: none;
+      color: #555;
+      margin-top: 1rem;
+      padding: 0.8rem;
+      background-color: #e9ecef;
+      border-radius: 8px;
+    }
+
+    /* Table styling for Leaderboard */
+    .table thead th {
+      background-color: #343a40;
+      color: #fff;
+      border-color: #454d55;
+      cursor: pointer; /* Indicate sortable */
+      position: relative;
+      user-select: none; /* Prevent text selection on click */
+    }
+
+    .table thead th .sort-icon {
+        margin-left: 5px;
+        opacity: 0.5;
+        transition: opacity 0.2s ease;
+    }
+    .table thead th:hover .sort-icon {
+        opacity: 1;
+    }
+
+    /* Leaderboard Filters */
+    .leaderboard-filters select,
+    .leaderboard-filters input {
+        margin-bottom: 10px;
+    }
+
+    /* Recent Matches Section Styles */
+    .recent-matches-section {
+      background-color: #0d0d0d;
+      padding: 50px 0;
+      color: #fff;
+    }
+
+    .recent-matches-section .match-card {
+      border: 2px solid #333;
+      border-radius: 12px;
+      overflow: hidden;
+      background-color: #1a1a1a;
+      box-shadow: 0 0 20px rgba(255, 215, 0, 0.2);
+      height: 100%;
+    }
+
+    .recent-matches-section .match-img-16by9 {
+      width: 100%;
+      height: 200px; /* Adjusted height */
+      object-fit: cover;
+      display: block;
+    }
+
+    .recent-matches-section .card-body {
+      padding: 25px;
+    }
+
+    .recent-matches-section .card-title {
+      color: #FFD700;
+      font-size: 1.6rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .recent-matches-section .debater-info {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.5rem;
+      color: #FFD700;
+      font-size: 1.1rem;
+    }
+
+    .recent-matches-section .debater-info strong {
+      flex-grow: 1;
+      text-align: left;
+    }
+
+    .recent-matches-section .debater-info .badge {
+      flex-shrink: 0;
+      margin-left: 10px;
+      font-size: 0.9em;
+    }
+
+    /* Individual Match History */
+    .individual-match-history .card {
+      background-color: #fff;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      transition: all 0.3s ease;
+    }
+
+    .individual-match-history .card:hover {
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+
+    .individual-match-history .card-body {
+      display: flex;
+      align-items: center;
+      padding: 15px;
+    }
+
+    .individual-match-history img.debater-thumbnail { /* Class for debater profile thumb */
+      border-radius: 50%;
+      margin-right: 15px;
+      border: 2px solid #0d6efd;
+      width: 60px; /* Adjusted thumbnail size */
+      height: 60px;
+      object-fit: cover;
+    }
+
+    .individual-match-history .card-body img.flag-icon {
+      border-radius: 3px !important;
+      width: 20px;
+      height: auto;
+      border: none !important;
+      vertical-align: middle;
+      margin-left: 5px;
+    }
+
+    .individual-match-history h5 {
+      margin-bottom: 5px;
+      font-size: 1.25rem;
+      color: #212529;
+    }
+
+    .individual-match-history p {
+      margin-bottom: 3px;
+      font-size: 0.95rem;
+      color: #6c757d;
+    }
+
+    .individual-match-history .badge {
+      font-size: 0.8em;
+    }
+
+    /* Specific background colors for win/loss in individual history */
+    .individual-match-history .card[style*="background-color: #f0f0f0;"] {
+      background-color: #e6ffe6 !important;
+      border-color: #d4edda;
+    }
+
+    .individual-match-history .card[style*="background-color: #fff0f0;"] {
+      background-color: #ffe6e6 !important;
+      border-color: #f5c6cb;
+    }
+
+    /* Debater Profile Section Styles */
+    .debater-profile .card {
+        text-align: center;
+        background-color: #ffffff;
+        border: 1px solid #e0e0e0;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+
+    .debater-profile .card-img-top { /* for profile display in this section only */
+        width: 150px;
+        height: 150px;
+        border-radius: 50%;
+        object-fit: cover;
+        margin: 20px auto 10px auto;
+        border: 4px solid #0d6efd;
+    }
+
+    .debater-profile .profile-name {
+        font-size: 1.8rem;
+        font-weight: bold;
+        color: #212529;
+        margin-bottom: 5px;
+    }
+
+    .debater-profile .profile-record {
+        font-size: 1.1rem;
+        margin-bottom: 15px;
+    }
+
+    .debater-profile .profile-metric {
+        margin-bottom: 5px;
+        font-size: 1rem;
+        color: #555;
+        display: flex;
+        justify-content: space-between;
+        padding: 0 15px;
+    }
+
+    .debater-profile .profile-metric strong {
+        color: #333;
+    }
+
+    .debater-profile .metric-value {
+        font-weight: bold;
+        color: #0d6efd;
+    }
+    
+    /* Comparison specific styles (re-added) */
+    .compare-section .compare-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+
+    .compare-section .compare-avatar {
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 4px solid #0d6efd;
+        margin-bottom: 10px;
+    }
+
+    .compare-section .vs-text {
+        font-size: 2.5rem;
+        font-weight: bold;
+        color: #dc3545; /* Bootstrap danger color */
+        margin: 0 20px;
+        align-self: center;
+    }
+
+    .compare-section .metric-table {
+        width: 100%;
+        margin-top: 20px;
+    }
+
+    .compare-section .metric-table td {
+        padding: 8px;
+        vertical-align: middle;
+    }
+
+    .compare-section .metric-name {
+        font-weight: bold;
+        color: #333;
+        text-align: center;
+    }
+
+    .compare-section .score-badge {
+        font-size: 1em;
+        padding: 0.5em 1em;
+        width: 60px; /* Fixed width for score badge */
+    }
+  </style>
 </head>
 <body>
 
-  <nav class="navbar navbar-dark bg-dark">
-    <div class="container-fluid">
-      <a class="navbar-brand" href="#home" aria-label="Home page">DBA - Debater Battle Arena</a>
-      <ul class="navbar-nav flex-row">
-        <li class="nav-item me-3">
-          <a class="nav-link active" aria-current="page" href="#home">Home</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link" href="#compare">Compare Debaters</a>
-        </li>
-      </ul>
-    </div>
-  </nav>
+<div class="hero-image-container">
+  <img src="7745A053-1315-4B4D-AB24-9BFB05370A20.jpeg" alt="Foto Hiroo">
+</div>
 
-  <main id="app-root">
-    <div class="container d-flex justify-content-center align-items-center" style="min-height: 80vh;">
-      <div class="text-center">
-        <div class="spinner-border text-primary" role="status" aria-hidden="true">
-          <span class="visually-hidden">Loading application data...</span>
+<nav class="navbar navbar-dark bg-dark">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="index.html">DBA - Debater Battle Arena</a>
+    <ul class="navbar-nav flex-row">
+      <li class="nav-item me-3">
+        <a class="nav-link active" aria-current="page" href="index.html">Home</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" href="#compare-section-id">Compare Debaters</a> </li>
+    </ul>
+  </div>
+</nav>
+
+<section class="container my-5">
+  <h2 class="mb-4">Top Record Debaters DBA</h2>
+  <div class="row text-center">
+    <div class="col-md-4">
+      <div class="card shadow">
+        <div class="card-body">
+          <h3>Hiroo <img src="IMG_0417.png" width="24" style="margin-left:5px;" alt="ID"/></h3>
+          <p>Record: <span class="badge bg-success">1 - 0</span></p>
         </div>
-        <p class="mt-3" role="status">Loading application data...</p>
       </div>
     </div>
-  </main>
-
-  <div class="toast-container position-fixed bottom-0 end-0 p-3">
-    <div id="liveToast" class="toast hide" role="alert" aria-live="assertive" aria-atomic="true">
-      <div class="toast-header">
-        <strong class="me-auto">Notification</strong>
-        <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
-      </div>
-      <div class="toast-body" id="toastBody">
+    <div class="col-md-4">
+      <div class="card shadow">
+        <div class="card-body">
+          <h3>Zogratis <img src="IMG_0417.png" width="24" style="margin-left:5px;" alt="ID"/></h3>
+          <p>Record: <span class="badge bg-success">1 - 0</span></p> 
         </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card shadow">
+        <div class="card-body">
+          <h3>Aryanwt <img src="IMG_0417.png" width="24" style="margin-left:5px;" alt="ID"/></h3>
+          <p>Record: <span class="badge bg-success">1 - 0</span></p>
+        </div>
+      </div>
     </div>
   </div>
+</section>
 
-  <footer class="bg-dark text-white text-center py-4 mt-5">
-    <p class="mb-0">© 2025 Debater Battle Arena. All Rights Reserved.</p>
-  </footer>
+<section class="container my-5">
+  <h2 class="mb-4">Low Record Debaters DBA</h2>
+  <div class="row text-center">
+    <div class="col-md-4">
+      <div class="card shadow">
+        <div class="card-body">
+          <h3>Renji <img src="IMG_0418.png" width="24" style="margin-left:5px;" alt="MY"/></h3>
+          <p>Record: <span class="badge bg-danger">0 - 1</span></p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card shadow">
+        <div class="card-body">
+          <h3>Muchibei <img src="IMG_0418.png" width="24" style="margin-left:5px;" alt="MY"/></h3>
+          <p>Record: <span class="badge bg-danger">0 - 1</span></p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card shadow">
+        <div class="card-body">
+          <h3>Rim <img src="IMG_0418.png" width="24" style="margin-left:5px;" alt="MY"/></h3>
+          <p>Record: <span class="badge bg-danger">0 - 1</span></p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
 
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-  <script src="script.js"></script>
+<section class="container my-5">
+  <h2 class="mb-4 text-center">Top Debaters DBA (Quick View)</h2>
+  <div class="row text-center">
+
+    <div class="col-md-4">
+      <div class="card shadow h-100">
+        <img src="IMG_0385.jpeg" class="card-img-top" alt="Hiroo"/>
+        <div class="card-body">
+          <h3 class="clickable-name" onclick="toggleDesc('hiroo-desc')">
+            Hiroo <img src="IMG_0417.png" width="24" style="margin-left:5px;" alt="ID"/>
+          </h3>
+          <p>Record: <span class="badge bg-success">1 - 0</span></p>
+          <div id="hiroo-desc" class="debater-desc">
+            <p><strong>Karakter:</strong> Jaehwan</p>
+            <p><strong>Summary:</strong> Hiroo adalah debater hebat.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="card shadow h-100">
+        <img src="IMG_0402.jpeg" class="card-img-top" alt="Zogratis"/>
+        <div class="card-body">
+          <h3 class="clickable-name" onclick="toggleDesc('zogratis-desc')">
+            Zogratis <img src="IMG_0417.png" width="24" style="margin-left:5px;" alt="ID"/>
+          </h3>
+          <p>Record: <span class="badge bg-success">1 - 0</span></p>
+          <div id="zogratis-desc" class="debater-desc">
+            <p><strong>Karakter:</strong> Ohmazio</p>
+            <p><strong>Summary:</strong> Zogratis adalah debater tangguh.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="card shadow h-100">
+        <img src="IMG_0388.jpeg" class="card-img-top" alt="Aryanwt"/>
+        <div class="card-body">
+          <h3 class="clickable-name" onclick="toggleDesc('aryan-desc')">
+            Aryanwt <img src="IMG_0417.png" width="24" style="margin-left:5px;" alt="ID"/>
+          </h3>
+          <p>Record: <span class="badge bg-success">1 - 0</span></p>
+          <div id="aryan-desc" class="debater-desc">
+            <p><strong>Karakter:</strong> Ha Dowan</p>
+            <p><strong>Summary:</strong> Aryanwt adalah debater cerdas.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<section class="container my-5">
+  <h2 class="text-center fw-bold text-uppercase mb-4">Leaderboard Per Tier (DBA)</h2>
+
+  <div class="leaderboard-filters row mb-3">
+      <div class="col-md-6 mb-2">
+          <input type="text" class="form-control" id="leaderboardSearch" placeholder="Cari debater...">
+      </div>
+      <div class="col-md-6 mb-2">
+          <select class="form-select" id="tierFilter">
+              <option value="">Filter by Tier</option>
+              <option value="High Tier">High Tier</option>
+              <option value="Mid Tier">Mid Tier</option>
+              <option value="Low Tier">Low Tier</option>
+          </select>
+      </div>
+      <div class="col-md-6 mb-2">
+          <select class="form-select" id="countryFilter">
+              <option value="">Filter by Country</option>
+              </select>
+      </div>
+      <div class="col-md-6 mb-2">
+          <canvas id="overallStatsChart" height="100"></canvas>
+      </div>
+  </div>
+
+
+  <div class="mb-4">
+    <h3 class="text-white bg-warning text-center py-2 rounded">High Tier</h3>
+    <table class="table table-bordered table-striped text-center align-middle">
+      <thead class="table-dark">
+        <tr>
+          <th data-sort="rank">Rank <i class="fas fa-sort sort-icon"></i></th>
+          <th>Foto</th>
+          <th data-sort="name">Nama <i class="fas fa-sort sort-icon"></i></th>
+          <th data-sort="country">Negara <i class="fas fa-sort sort-icon"></i></th>
+          <th data-sort="wins">Record <i class="fas fa-sort sort-icon"></i></th>
+        </tr>
+      </thead>
+      <tbody id="highTierBody">
+        </tbody>
+    </table>
+  </div>
+
+  <div class="mb-4">
+    <h3 class="text-white bg-secondary text-center py-2 rounded">Mid Tier</h3>
+    <table class="table table-bordered table-striped text-center align-middle">
+      <thead class="table-dark">
+        <tr>
+          <th data-sort="rank">Rank <i class="fas fa-sort sort-icon"></i></th>
+          <th>Foto</th>
+          <th data-sort="name">Nama <i class="fas fa-sort sort-icon"></i></th>
+          <th data-sort="country">Negara <i class="fas fa-sort sort-icon"></i></th>
+          <th data-sort="wins">Record <i class="fas fa-sort sort-icon"></i></th>
+        </tr>
+      </thead>
+      <tbody id="midTierBody">
+        </tbody>
+    </table>
+  </div>
+
+  <div class="mb-4">
+    <h3 class="text-white bg-dark text-center py-2 rounded">Low Tier</h3>
+    <table class="table table-bordered table-striped text-center align-middle">
+      <thead class="table-dark">
+        <tr>
+          <th data-sort="rank">Rank <i class="fas fa-sort sort-icon"></i></th>
+          <th>Foto</th>
+          <th data-sort="name">Nama <i class="fas fa-sort sort-icon"></i></th>
+          <th data-sort="country">Negara <i class="fas fa-sort sort-icon"></i></th>
+          <th data-sort="wins">Record <i class="fas fa-sort sort-icon"></i></th>
+        </tr>
+      </thead>
+      <tbody id="lowTierBody">
+        </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="container my-5 recent-matches-section">
+  <h2 class="mb-4 text-center">Recent Matches</h2>
+
+  <div class="row g-4 justify-content-center" id="recentMatchesSection">
+    </div>
+</section>
+
+<section class="container my-5">
+  <h2 class="mb-4 text-center">Individual Match History</h2>
+
+  <div class="row g-3" id="individualMatchHistory">
+    </div>
+</section>
+
+<section class="container my-5 compare-section" id="compare-section-id">
+  <h2 class="text-center fw-bold text-uppercase mb-4">Compare Debaters</h2>
+  <div class="row justify-content-center mb-4">
+    <div class="col-md-5">
+        <select class="form-select mb-2" id="debaterSelect1" aria-label="Select first debater">
+            <option value="">Select Debater 1</option>
+            </select>
+    </div>
+    <div class="col-md-1 d-flex align-items-center justify-content-center">
+        <span class="vs-text">VS</span>
+    </div>
+    <div class="col-md-5">
+        <select class="form-select mb-2" id="debaterSelect2" aria-label="Select second debater">
+            <option value="">Select Debater 2</option>
+            </select>
+    </div>
+  </div>
+  <div class="row" id="comparisonResults">
+      <div class="col-12 text-center text-muted">
+          <p>Select two debaters above to compare their profiles.</p>
+      </div>
+  </div>
+</section>
+
+<footer class="bg-dark text-white text-center py-3">
+  <p class="mb-0">© 2025 Debater Battle Arena. All Rights Reserved.</p>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="script.js"></script>
+
 </body>
 </html>
