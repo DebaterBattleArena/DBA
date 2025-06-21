@@ -1,16 +1,16 @@
 /* General Styles */
 body {
-  font-family: 'Roboto', sans-serif; /* Menggunakan font Roboto */
+  font-family: 'Roboto', sans-serif;
   background-color: #f8f9fa;
   color: #333;
 }
 
 h1, h2, h3, h4, h5, h6 {
-  font-family: 'Poppins', sans-serif; /* Menggunakan font Poppins untuk judul */
-  color: #212529; /* Warna teks gelap untuk judul */
+  font-family: 'Poppins', sans-serif;
+  color: #212529;
 }
 
-/* Hero Image */
+/* Hero Image (for Home Page) */
 .hero-image-container {
   position: relative;
   width: 100%;
@@ -32,19 +32,19 @@ h1, h2, h3, h4, h5, h6 {
 .card {
   border-radius: 10px;
   overflow: hidden;
-  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out; /* Animasi untuk hover */
+  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
 }
 
 .card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 8px 20px rgba(0,0,0,0.15); /* Efek bayangan lebih menonjol */
+  box-shadow: 0 8px 20px rgba(0,0,0,0.15);
 }
 
 .badge {
   font-size: 0.9em;
   padding: 0.4em 0.8em;
   border-radius: 0.5rem;
-  font-weight: 600; /* Lebih tebal */
+  font-weight: 600;
 }
 
 /* Clickable Names & Descriptions (for Quick View Profiles) */
@@ -53,7 +53,7 @@ h1, h2, h3, h4, h5, h6 {
   color: #0d6efd;
   text-decoration: underline;
   transition: color 0.2s ease-in-out;
-  font-weight: 600; /* Lebih tebal */
+  font-weight: 600;
 }
 
 .clickable-name:hover {
@@ -61,22 +61,22 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .debater-desc {
-  display: none; /* Default hidden */
+  display: none; /* Default hidden by JS */
   color: #555;
   margin-top: 1rem;
   padding: 0.8rem;
   background-color: #e9ecef;
   border-radius: 8px;
-  opacity: 0; /* Initial state for fade-in */
-  max-height: 0; /* Initial state for slide-down */
+  opacity: 0;
+  max-height: 0;
   overflow: hidden;
-  transition: opacity 0.4s ease-out, max-height 0.4s ease-out; /* Smooth transition */
+  transition: opacity 0.4s ease-out, max-height 0.4s ease-out;
 }
 
-.debater-desc.show { /* Class to show description */
-  display: block; /* Make it visible */
-  opacity: 1; /* Fade in */
-  max-height: 200px; /* Adjust max-height based on content to make sure it expands fully */
+.debater-desc.show {
+  display: block;
+  opacity: 1;
+  max-height: 200px; /* Adjust max-height based on content */
 }
 
 .debater-desc p {
@@ -89,27 +89,22 @@ h1, h2, h3, h4, h5, h6 {
   background-color: #343a40;
   color: #fff;
   border-color: #454d55;
+  cursor: pointer; /* Indicates sortable */
+  position: relative;
 }
 
-.table tbody tr {
-  background-color: #fff;
+.table thead th .sort-icon {
+    margin-left: 5px;
+    opacity: 0.5;
+    transition: opacity 0.2s ease;
 }
-
-.table-striped tbody tr:nth-of-type(odd) {
-  background-color: #f2f2f2;
-}
-
-.table-bordered th, .table-bordered td {
-  border-color: #dee2e6;
-}
-
-.table img {
-  vertical-align: middle;
+.table thead th:hover .sort-icon {
+    opacity: 1;
 }
 
 /* Recent Matches Section Styles */
 .recent-matches-section {
-  background-color: #0d0d0d; /* Dark background for match cards */
+  background-color: #0d0d0d;
   padding: 50px 0;
   color: #fff;
 }
@@ -160,7 +155,7 @@ h1, h2, h3, h4, h5, h6 {
   font-size: 0.9em;
 }
 
-/* Individual Match History */
+/* Individual Match History (Summary on Home) */
 .individual-match-history .card {
   background-color: #fff;
   border: 1px solid #ddd;
@@ -213,17 +208,20 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* Specific background colors for win/loss in individual history */
-.individual-match-history .card.win-card {
+.individual-match-history .card.win-card,
+.profile-match-history .card.win-card { /* Add for profile page too */
   background-color: #e6ffe6; /* Lighter green for wins */
   border-color: #d4edda;
 }
 
-.individual-match-history .card.loss-card {
+.individual-match-history .card.loss-card,
+.profile-match-history .card.loss-card { /* Add for profile page too */
   background-color: #ffe6e6; /* Lighter red for losses */
   border-color: #f5c6cb;
 }
 
-/* Debater Profile Section Styles (for index.html & profile.html) */
+
+/* Debater Profile Section Styles (for dynamic content) */
 .debater-profile .card {
     text-align: center;
     background-color: #ffffff;
@@ -237,7 +235,7 @@ h1, h2, h3, h4, h5, h6 {
     border-radius: 50%;
     object-fit: cover;
     margin: 20px auto 10px auto;
-    border: 4px solid #0d6efd; /* Blue border */
+    border: 4px solid #0d6efd;
 }
 
 .debater-profile .profile-name {
@@ -257,6 +255,7 @@ h1, h2, h3, h4, h5, h6 {
     font-size: 1rem;
     color: #555;
     display: flex;
+    align-items: center; /* Align items vertically */
     justify-content: space-between;
     padding: 0 15px;
 }
@@ -268,14 +267,31 @@ h1, h2, h3, h4, h5, h6 {
 .debater-profile .metric-value {
     font-weight: bold;
     color: #0d6efd;
+    width: 50px; /* Fixed width for score to align better */
+    text-align: right;
 }
 
-.debater-profile .profile-detail p {
-    margin-bottom: 8px;
-    font-size: 1rem;
-    color: #555;
+/* Progress Bar for Metrics */
+.debater-profile .progress {
+    height: 10px; /* Thin progress bar */
+    border-radius: 5px;
+    margin-left: 10px; /* Space from metric name */
+    flex-grow: 1; /* Take up remaining space */
 }
 
-.debater-profile .profile-detail strong {
-    color: #333;
+.debater-profile .progress-bar {
+    background-color: #0d6efd; /* Blue color for progress */
+    transition: width 0.5s ease-in-out; /* Smooth animation */
+}
+
+/* Profile specific match history (on profile page) */
+.profile-match-history .card {
+    background-color: #fff;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.profile-match-history .card:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
 }
