@@ -157,29 +157,7 @@
       }
     },
     {
-      "id": "newbie_one",
-      "name": "Newbie One",
-      "country": "Indonesia",
-      "country_code": "ID",
-      "flag": "IMG_0417.png",
-      "photo": "default_avatar.png",
-      "record": "0 - 0",
-      "wins": 0,
-      "losses": 0,
-      "tier": "Low Tier",
-      "character": "Placeholder",
-      "summary": "A new debater showing promising signs.",
-      "bio": "Newbie One recently joined the arena and is eager to learn and grow. Still building experience, but has potential.",
-      "metrics": {
-        "Rhetoric": 4,
-        "Typing Structure": 4,
-        "Critical Thinking": 3,
-        "Logical Fallacies": 3,
-        "Typing Strength": 4,
-        "Tiering System": 3,
-        "Calculations": 3,
-        "Philosophy": 3,
-        "General Knowledge": 5
+
       }
     }
   ],
