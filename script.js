@@ -3,6 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let allMatchesData = [];
     let currentLeaderboardSort = { column: 'rank', order: 'asc' }; // Default sort for leaderboard
     let comparisonChartInstance = null; // To store Chart.js instance for destruction
+    let overallStatsChartInstance = null; // To store Chart.js instance for overall stats chart
 
     // --- Utility Functions ---
 
@@ -13,8 +14,14 @@ document.addEventListener('DOMContentLoaded', () => {
      */
     function showToast(message, type = 'info') {
         const toastEl = document.getElementById('liveToast');
+        if (!toastEl) {
+            console.error('Toast element not found!');
+            return;
+        }
         const toastBody = document.getElementById('toastBody');
-        toastBody.textContent = message;
+        if (toastBody) {
+            toastBody.textContent = message;
+        }
 
         // Remove all existing text-bg classes to ensure only one is applied
         toastEl.classList.remove('text-bg-primary', 'text-bg-success', 'text-bg-danger', 'text-bg-warning', 'text-bg-info');
@@ -76,11 +83,11 @@ document.addEventListener('DOMContentLoaded', () => {
      * Fallback for broken images.
      * @param {HTMLElement} imgElement - The image element that failed to load.
      */
-    function onImageError(imgElement) {
+    window.onImageError = function(imgElement) { // Made global to be accessible from inline onerror
         imgElement.onerror = null; // Prevent infinite loop if fallback also fails
         imgElement.src = 'assets/default_avatar.png'; // Path to a default avatar image
         imgElement.alt = 'Default Avatar';
-    }
+    };
 
     // --- Rendering Functions for various pages/sections ---
 
@@ -271,21 +278,21 @@ document.addEventListener('DOMContentLoaded', () => {
         for (const [metricName, metricScore] of Object.entries(debater.metrics)) {
             const widthPercentage = (parseFloat(metricScore) / 10) * 100;
             metricsHtml += `
-                <div class="profile-metric">
-                    <span>${metricName}:</span>
+                <div class="profile-metric d-flex align-items-center mb-2">
+                    <span class="me-2 text-capitalize">${metricName.replace(/([A-Z])/g, ' $1').trim()}:</span>
                     <div class="progress flex-grow-1" role="progressbar" aria-label="${metricName} score" aria-valuenow="${metricScore}" aria-valuemin="0" aria-valuemax="10">
-                        <div class="progress-bar" style="width: ${widthPercentage}%;"></div>
+                        <div class="progress-bar bg-info" style="width: ${widthPercentage}%;"></div>
                     </div>
-                    <span class="metric-value">${metricScore}/10</span>
+                    <span class="metric-value ms-2">${metricScore}/10</span>
                 </div>
             `;
-            metricLabels.push(metricName);
+            metricLabels.push(metricName.replace(/([A-Z])/g, ' $1').trim()); // Make labels more readable
             metricScores.push(parseFloat(metricScore));
         }
 
-        const winRate = ((debater.wins / (debater.wins + debater.losses)) * 100).toFixed(2);
-        const totalMatches = debater.wins + debater.losses;
-        const averageMetric = (metricScores.reduce((sum, score) => sum + score, 0) / metricScores.length).toFixed(2);
+        const totalWinsLosses = debater.wins + debater.losses;
+        const winRate = totalWinsLosses > 0 ? ((debater.wins / totalWinsLosses) * 100).toFixed(2) : '0.00';
+        const averageMetric = metricScores.length > 0 ? (metricScores.reduce((sum, score) => sum + score, 0) / metricScores.length).toFixed(2) : 'N/A';
 
         const profilePageHtml = `
             <section class="container my-5">
@@ -296,7 +303,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <img src="${debater.photo}" class="profile-avatar mb-3 animate__animated animate__zoomIn" alt="${debater.name} Profile Photo" onerror="onImageError(this)">
                                 <h2 class="profile-name animate__animated animate__fadeInDown">${debater.name} <img src="${debater.flag}" width="30" class="ms-2" alt="${debater.country_code} flag"/></h2>
                                 <p class="profile-record animate__animated animate__fadeIn">Record: <span class="badge ${debater.wins > debater.losses ? 'bg-success' : 'bg-danger'}">${debater.record}</span></p>
-                                <p class="text-muted"><i class="fas fa-percentage me-1"></i> Win Rate: ${winRate}% | <i class="fas fa-gamepad me-1"></i> Total Matches: ${totalMatches}</p>
+                                <p class="text-muted"><i class="fas fa-percentage me-1"></i> Win Rate: ${winRate}% | <i class="fas fa-gamepad me-1"></i> Total Matches: ${totalWinsLosses}</p>
                                 <p class="text-muted"><i class="fas fa-star-half-alt me-1"></i> Average Metric Score: ${averageMetric}/10</p>
                             </div>
                             <hr class="my-4">
@@ -331,50 +338,54 @@ document.addEventListener('DOMContentLoaded', () => {
         setAppContent(profilePageHtml);
 
         // Render Radar Chart
-        new Chart(document.getElementById('radarChart'), {
-            type: 'radar',
-            data: {
-                labels: metricLabels,
-                datasets: [{
-                    label: 'Debater Metrics',
-                    data: metricScores,
-                    backgroundColor: 'rgba(13, 110, 253, 0.2)', // Bootstrap primary blue with alpha
-                    borderColor: 'rgba(13, 110, 253, 1)',
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    r: {
-                        angleLines: { display: false },
-                        suggestedMin: 0,
-                        suggestedMax: 10,
-                        ticks: {
-                            stepSize: 2,
-                            backdropColor: 'transparent', // Make tick labels background transparent
-                            color: '#6c757d'
-                        },
-                        pointLabels: {
-                            color: '#212529', // Label color
-                            font: { size: 12 }
-                        },
-                        grid: { color: 'rgba(0,0,0,0.1)' } // Grid line color
-                    }
+        const radarChartCtx = document.getElementById('radarChart');
+        if (radarChartCtx) {
+            new Chart(radarChartCtx, {
+                type: 'radar',
+                data: {
+                    labels: metricLabels,
+                    datasets: [{
+                        label: 'Debater Metrics',
+                        data: metricScores,
+                        backgroundColor: 'rgba(13, 110, 253, 0.2)', // Bootstrap primary blue with alpha
+                        borderColor: 'rgba(13, 110, 253, 1)',
+                        borderWidth: 1
+                    }]
                 },
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                return context.dataset.label + ': ' + context.raw + '/10';
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        r: {
+                            angleLines: { display: false },
+                            suggestedMin: 0,
+                            suggestedMax: 10,
+                            ticks: {
+                                stepSize: 2,
+                                backdropColor: 'transparent', // Make tick labels background transparent
+                                color: '#6c757d'
+                            },
+                            pointLabels: {
+                                color: '#212529', // Label color
+                                font: { size: 12 }
+                            },
+                            grid: { color: 'rgba(0,0,0,0.1)' } // Grid line color
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': ' + context.raw + '/10';
+                                }
                             }
                         }
                     }
                 }
-            }
-        });
+            });
+        }
+
 
         // Render full match history for the specific debater
         const individualFullMatchHistorySection = document.getElementById('individualFullMatchHistory');
@@ -382,11 +393,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const debaterMatches = matches.filter(match =>
                 match.debater1.id === debater.id || match.debater2.id === debater.id
             ).sort((a, b) => {
-                 // Sort by date (if available) or by ID
-                const dateA = a.date ? new Date(a.date) : 0;
-                const dateB = b.date ? new Date(b.date) : 0;
-                if (dateA && dateB) return dateB - dateA; // Newest first
-                return b.id.localeCompare(a.id);
+                const dateA = a.date ? new Date(a.date) : new Date(0); // Use epoch for missing dates
+                const dateB = b.date ? new Date(b.date) : new Date(0);
+                // If dates are valid, sort by date (newest first). Otherwise, fall back to ID.
+                if (dateA.getTime() !== new Date(0).getTime() && dateB.getTime() !== new Date(0).getTime()) {
+                    return dateB.getTime() - dateA.getTime();
+                }
+                return b.id.localeCompare(a.id); // Fallback if dates are missing
             });
 
             let matchesHtml = '';
@@ -405,13 +418,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     matchesHtml += `
                         <div class="col-12">
                             <div class="card shadow p-3 mb-2 d-flex flex-row align-items-center ${cardBackgroundClass} animate__animated animate__fadeIn">
-                                <img src="${debater.photo}" width="50" class="rounded-circle me-3" alt="${debater.name}" onerror="onImageError(this)">
+                                <img src="${debater.photo}" width="50" height="50" class="rounded-circle me-3 object-fit-cover" alt="${debater.name}" onerror="onImageError(this)">
                                 <div class="flex-grow-1">
-                                    <h6 class="mb-1 fw-bold">${debater.name} <span class="badge ${statusBadgeClass}">${statusText}</span> vs ${opponent.name}</h6>
+                                    <h6 class="mb-1 fw-bold">${debater.name} <span class="badge ${statusBadgeClass}">${statusText}</span> vs <a href="#profile/${opponent.id}" class="text-decoration-none">${opponent.name}</a></h6>
                                     <small class="text-muted">Method: ${match.method} - Character: ${debater.character} vs ${opponent.character}</small><br>
                                     <small class="text-muted"><i class="fas fa-calendar-alt me-1"></i> Date: ${matchDate} ${match.event ? `(Event: ${match.event})` : ''}</small>
                                 </div>
-                                <img src="${opponentPhoto}" width="50" class="rounded-circle ms-3" alt="${opponent.name}" onerror="onImageError(this)">
+                                <img src="${opponentPhoto}" width="50" height="50" class="rounded-circle ms-3 object-fit-cover" alt="${opponent.name}" onerror="onImageError(this)">
                             </div>
                         </div>
                     `;
@@ -428,6 +441,7 @@ document.addEventListener('DOMContentLoaded', () => {
      * @param {Array<Object>} debaters - Array of debater data.
      */
     function renderComparePage(debaters) {
+        document.title = 'DBA - Compare Debaters';
         const comparePageHtml = `
             <section class="container my-5 animate__animated animate__fadeIn">
                 <h2 class="text-center mb-4 fw-bold text-uppercase">Compare Debaters <i class="fas fa-balance-scale-right ms-2"></i></h2>
@@ -439,7 +453,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         </select>
                     </div>
                     <div class="col-md-1 d-flex align-items-center justify-content-center">
-                        <i class="fas fa-times vs-icon"></i>
+                        <i class="fas fa-times vs-icon fs-3 text-secondary"></i>
                     </div>
                     <div class="col-md-5">
                         <select class="form-select mb-2" id="debaterSelect2" aria-label="Select second debater">
@@ -471,17 +485,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Sort debaters by win rate, then by total matches (descending)
         const sortedDebaters = [...debaters].sort((a, b) => {
-            const winRateA = (a.wins + a.losses) > 0 ? a.wins / (a.wins + a.losses) : 0;
-            const winRateB = (b.wins + b.losses) > 0 ? b.wins / (b.wins + b.losses) : 0;
-            if (winRateA !== winRateB) return winRateB - winRateA;
-            return (b.wins + b.losses) - (a.wins + a.losses);
+            const totalMatchesA = (a.wins + a.losses);
+            const totalMatchesB = (b.wins + b.losses);
+
+            const winRateA = totalMatchesA > 0 ? a.wins / totalMatchesA : 0;
+            const winRateB = totalMatchesB > 0 ? b.wins / totalMatchesB : 0;
+
+            if (winRateA !== winRateB) return winRateB - winRateA; // Sort by win rate descending
+            return totalMatchesB - totalMatchesA; // Then by total matches descending
         });
 
         const top3 = sortedDebaters.slice(0, 3);
-        // Calculate the starting index for the bottom 3, ensuring it's not less than 0
-        const low3StartIndex = Math.max(0, sortedDebaters.length - 3);
-        // Get the last 3 debaters, then filter out any that are also in the top 3 (unlikely but good practice)
-        const low3 = sortedDebaters.slice(low3StartIndex).filter(d => !top3.some(t => t.id === d.id)).reverse(); // Reverse to show lowest first
+        // Ensure low3 are distinct from top3 and truly represent the lowest performers
+        const low3Candidates = [...sortedDebaters].sort((a, b) => {
+            const totalMatchesA = (a.wins + a.losses);
+            const totalMatchesB = (b.wins + b.losses);
+
+            const winRateA = totalMatchesA > 0 ? a.wins / totalMatchesA : 0;
+            const winRateB = totalMatchesB > 0 ? b.wins / totalMatchesB : 0;
+
+            if (winRateA !== winRateB) return winRateA - winRateB; // Sort by win rate ascending
+            return totalMatchesA - totalMatchesB; // Then by total matches ascending
+        });
+
+        const low3 = low3Candidates.filter(d => !top3.some(t => t.id === d.id)).slice(0, 3);
 
         let html = `
             <div class="col-md-6">
@@ -491,7 +518,8 @@ document.addEventListener('DOMContentLoaded', () => {
         top3.forEach(debater => {
             html += `
                 <div class="col-md-4">
-                    <div class="card shadow h-100 animate__animated animate__fadeInUp" role="button" aria-label="View ${debater.name}'s profile" onclick="window.location.hash='#profile/${debater.id}'">
+                    <div class="card shadow h-100 animate__animated animate__fadeInUp card-hover-effect" role="button" aria-label="View ${debater.name}'s profile" onclick="window.location.hash='#profile/${debater.id}'">
+                        <img src="${debater.photo}" class="card-img-top card-img-fixed-height" alt="${debater.name} photo" loading="lazy" onerror="onImageError(this)"/>
                         <div class="card-body">
                             <h4 class="card-title">${debater.name} <img src="${debater.flag}" width="24" class="ms-2" alt="${debater.country_code} flag"/></h4>
                             <p class="card-text">Record: <span class="badge ${debater.wins > debater.losses ? 'bg-success' : 'bg-danger'}">${debater.record}</span></p>
@@ -510,7 +538,8 @@ document.addEventListener('DOMContentLoaded', () => {
         low3.forEach(debater => {
             html += `
                 <div class="col-md-4">
-                    <div class="card shadow h-100 animate__animated animate__fadeInUp" role="button" aria-label="View ${debater.name}'s profile" onclick="window.location.hash='#profile/${debater.id}'">
+                    <div class="card shadow h-100 animate__animated animate__fadeInUp card-hover-effect" role="button" aria-label="View ${debater.name}'s profile" onclick="window.location.hash='#profile/${debater.id}'">
+                        <img src="${debater.photo}" class="card-img-top card-img-fixed-height" alt="${debater.name} photo" loading="lazy" onerror="onImageError(this)"/>
                         <div class="card-body">
                             <h4 class="card-title">${debater.name} <img src="${debater.flag}" width="24" class="ms-2" alt="${debater.country_code} flag"/></h4>
                             <p class="card-text">Record: <span class="badge ${debater.wins > debater.losses ? 'bg-success' : 'bg-danger'}">${debater.record}</span></p>
@@ -535,11 +564,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!quickViewProfilesSection) return;
 
         let html = '';
+        // Display a representative sample, e.g., the first 3
         debaters.slice(0, 3).forEach(debater => {
             html += `
                 <div class="col-md-4">
-                    <div class="card shadow h-100 text-center animate__animated animate__fadeInUp" aria-label="Quick summary for ${debater.name}">
-                        <img src="${debater.photo}" class="card-img-top" alt="${debater.name} photo" loading="lazy" onerror="onImageError(this)"/>
+                    <div class="card shadow h-100 text-center animate__animated animate__fadeInUp card-hover-effect" aria-label="Quick summary for ${debater.name}">
+                        <img src="${debater.photo}" class="card-img-top card-img-fixed-height" alt="${debater.name} photo" loading="lazy" onerror="onImageError(this)"/>
                         <div class="card-body">
                             <h3 class="clickable-name" data-debater-id="${debater.id}" tabindex="0" role="button" aria-expanded="false" aria-controls="${debater.id}-desc">
                                 ${debater.name} <img src="${debater.flag}" width="24" class="ms-2" alt="${debater.country_code} flag"/>
@@ -549,6 +579,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <p><strong>Character:</strong> ${debater.character}</p>
                                 <p><strong>Summary:</strong> ${debater.summary}</p>
                             </div>
+                            <a href="#profile/${debater.id}" class="btn btn-sm btn-outline-primary mt-2">View Profile</a>
                         </div>
                     </div>
                 </div>
@@ -558,11 +589,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Attach event listeners for clickable names
         quickViewProfilesSection.querySelectorAll('.clickable-name').forEach(element => {
-            element.addEventListener('click', () => {
+            element.addEventListener('click', (event) => {
+                event.preventDefault(); // Prevent default link behavior if it were an <a>
                 const debaterId = element.dataset.debaterId;
                 const descElement = document.getElementById(`${debaterId}-desc`);
                 if (descElement) {
-                    // Using Bootstrap's collapse functionality
                     const bsCollapse = new bootstrap.Collapse(descElement, { toggle: false });
                     if (descElement.classList.contains('show')) {
                         bsCollapse.hide();
@@ -583,187 +614,232 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /**
-     * Renders detailed debater profiles based on a search query.
+     * Renders detailed debater profiles based on search input.
      * @param {Array<Object>} debaters - Array of debater data.
-     * @param {string} query - The search query.
+     * @param {string} searchTerm - The search term to filter debaters.
      */
-    function renderDetailedProfiles(debaters, query) {
+    function renderDetailedProfiles(debaters, searchTerm) {
         const detailedProfilesSection = document.getElementById('detailedProfilesSection');
         if (!detailedProfilesSection) return;
 
-        detailedProfilesSection.innerHTML = ''; // Clear previous content
-
         const filteredDebaters = debaters.filter(debater =>
-            debater.name.toLowerCase().includes(query.toLowerCase())
+            debater.name.toLowerCase().includes(searchTerm.toLowerCase())
         );
 
-        if (filteredDebaters.length === 0 && query !== '') {
-            detailedProfilesSection.innerHTML = `
-                <div class="col-12 text-center text-muted animate__animated animate__fadeIn">
-                    <p><i class="fas fa-info-circle me-2"></i> No debaters found matching "${query}".</p>
-                </div>
-            `;
-            return;
-        } else if (query === '') {
-             detailedProfilesSection.innerHTML = `
-                <div class="col-12 text-center text-muted animate__animated animate__fadeIn">
-                  <p><i class="fas fa-search me-2"></i> Ketik nama debater di atas untuk melihat metrik profil lengkap mereka.</p>
-                </div>
-            `;
-            return;
-        }
+        let html = '';
+        if (filteredDebaters.length > 0) {
+            filteredDebaters.forEach(debater => {
+                let metricsHtml = '';
+                for (const [metricName, metricScore] of Object.entries(debater.metrics)) {
+                    const widthPercentage = (parseFloat(metricScore) / 10) * 100;
+                    metricsHtml += `
+                        <div class="profile-metric d-flex align-items-center mb-1">
+                            <span class="me-2 text-capitalize">${metricName.replace(/([A-Z])/g, ' $1').trim()}:</span>
+                            <div class="progress flex-grow-1" role="progressbar" aria-label="${metricName} score" aria-valuenow="${metricScore}" aria-valuemin="0" aria-valuemax="10">
+                                <div class="progress-bar bg-info" style="width: ${widthPercentage}%;"></div>
+                            </div>
+                            <span class="metric-value ms-2">${metricScore}/10</span>
+                        </div>
+                    `;
+                }
 
-        filteredDebaters.forEach(debater => {
-            const averageMetric = (Object.values(debater.metrics).reduce((sum, score) => sum + parseFloat(score), 0) / Object.values(debater.metrics).length).toFixed(2);
-            detailedProfilesSection.innerHTML += `
-                <div class="col-md-6 col-lg-4 animate__animated animate__fadeInUp">
-                    <div class="card shadow h-100 profile-card-hover" role="button" aria-label="View full profile of ${debater.name}" onclick="window.location.hash='#profile/${debater.id}'">
-                        <div class="card-body text-center">
-                            <img src="${debater.photo}" class="profile-avatar-small mb-3" alt="${debater.name} photo" onerror="onImageError(this)">
-                            <h5 class="card-title">${debater.name} <img src="${debater.flag}" width="20" class="ms-1" alt="${debater.country_code} flag"/></h5>
-                            <p class="card-text">Record: <span class="badge ${debater.wins > debater.losses ? 'bg-success' : 'bg-danger'}">${debater.record}</span></p>
-                            <p class="card-text text-muted">Avg. Metric: ${averageMetric}/10</p>
-                            <a href="#profile/${debater.id}" class="btn btn-sm btn-outline-primary mt-2">View Full Profile</a>
+                html += `
+                    <div class="col-md-6 col-lg-4 animate__animated animate__fadeInUp">
+                        <div class="card shadow h-100 debater-profile-card card-hover-effect">
+                            <img src="${debater.photo}" class="card-img-top debater-profile-img" alt="${debater.name} Profile Photo" loading="lazy" onerror="onImageError(this)">
+                            <div class="card-body text-center">
+                                <h4 class="card-title">${debater.name} <img src="${debater.flag}" width="24" class="ms-2" alt="${debater.country_code} flag"/></h4>
+                                <p class="card-text">Record: <span class="badge ${debater.wins > debater.losses ? 'bg-success' : 'bg-danger'}">${debater.record}</span></p>
+                                <div class="mt-3 text-start">
+                                    ${metricsHtml}
+                                </div>
+                                <a href="#profile/${debater.id}" class="btn btn-primary btn-sm mt-3">View Full Profile <i class="fas fa-arrow-right ms-1"></i></a>
+                            </div>
                         </div>
                     </div>
+                `;
+            });
+        } else {
+            html = `
+                <div class="col-12 text-center text-muted animate__animated animate__fadeIn">
+                    <p><i class="fas fa-info-circle me-2"></i> Tidak ada debater yang ditemukan dengan nama tersebut.</p>
                 </div>
             `;
-        });
+        }
+        detailedProfilesSection.innerHTML = html;
     }
 
+
     /**
-     * Renders the leaderboard section with filters and sorting.
+     * Renders the leaderboard table for all tiers.
      * @param {Array<Object>} debaters - Array of debater data.
-     * @param {string} query - Search query for debater name/country.
-     * @param {string} filterTier - Filter by tier (e.g., 'High Tier').
-     * @param {string} filterCountry - Filter by country.
-     * @param {string} sortColumn - Column to sort by (e.g., 'rank', 'name', 'wins').
-     * @param {string} sortOrder - Sort order ('asc' or 'desc').
      */
-    function renderLeaderboard(debaters, query = '', filterTier = '', filterCountry = '', sortColumn = 'rank', sortOrder = 'asc') {
+    function renderLeaderboard(debaters) {
         const highTierBody = document.getElementById('highTierBody');
         const midTierBody = document.getElementById('midTierBody');
         const lowTierBody = document.getElementById('lowTierBody');
 
         if (!highTierBody || !midTierBody || !lowTierBody) return;
 
+        // Apply filters
+        const searchTerm = document.getElementById('leaderboardSearch')?.value.toLowerCase() || '';
+        const tierFilter = document.getElementById('tierFilter')?.value || '';
+        const countryFilter = document.getElementById('countryFilter')?.value || '';
+
+        let filteredDebaters = debaters.filter(debater => {
+            const matchesSearch = debater.name.toLowerCase().includes(searchTerm);
+            const matchesTier = tierFilter === '' || debater.tier === tierFilter;
+            const matchesCountry = countryFilter === '' || debater.country === countryFilter;
+            return matchesSearch && matchesTier && matchesCountry;
+        });
+
+        // Sort debaters for leaderboard
+        filteredDebaters.sort((a, b) => {
+            const sortColumn = currentLeaderboardSort.column;
+            const sortOrder = currentLeaderboardSort.order;
+
+            let valA, valB;
+
+            switch (sortColumn) {
+                case 'rank': // This would require pre-calculating ranks based on filtered data if rank isn't a direct property
+                    // For now, let's sort by wins as a proxy for rank if 'rank' isn't explicitly calculated.
+                    valA = a.wins;
+                    valB = b.wins;
+                    break;
+                case 'name':
+                    valA = a.name.toLowerCase();
+                    valB = b.name.toLowerCase();
+                    break;
+                case 'country':
+                    valA = a.country.toLowerCase();
+                    valB = b.country.toLowerCase();
+                    break;
+                case 'wins':
+                    valA = a.wins;
+                    valB = b.wins;
+                    break;
+                default:
+                    valA = a.id; // Fallback to ID
+                    valB = b.id;
+            }
+
+            if (typeof valA === 'string') {
+                return sortOrder === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+            } else {
+                return sortOrder === 'asc' ? valA - valB : valB - valA;
+            }
+        });
+
+        // Clear previous content
         highTierBody.innerHTML = '';
         midTierBody.innerHTML = '';
         lowTierBody.innerHTML = '';
 
-        let filteredDebaters = debaters.filter(debater =>
-            (query === '' || debater.name.toLowerCase().includes(query.toLowerCase()) || debater.country.toLowerCase().includes(query.toLowerCase()) || debater.country_code.toLowerCase().includes(query.toLowerCase())) &&
-            (filterTier === '' || debater.tier === filterTier) &&
-            (filterCountry === '' || debater.country === filterCountry)
-        );
+        let highTierRank = 1, midTierRank = 1, lowTierRank = 1;
 
-        function sortTier(tierList) {
-            return [...tierList].sort((a, b) => { // Use spread to avoid modifying original array
-                let valA, valB;
-                if (sortColumn === 'rank' || sortColumn === 'wins') {
-                    // For rank/wins, sort by number of wins
-                    valA = a.wins;
-                    valB = b.wins;
-                    return sortOrder === 'asc' ? valA - valB : valB - valA;
-                } else if (sortColumn === 'name') {
-                    valA = a.name;
-                    valB = b.name;
-                    return sortOrder === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
-                } else if (sortColumn === 'country') {
-                    valA = a.country;
-                    valB = b.country;
-                    return sortOrder === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
-                }
-                return 0; // No sorting if column not recognized
-            });
+        filteredDebaters.forEach(debater => {
+            const row = document.createElement('tr');
+            let rankDisplay = '';
+
+            // Calculate win rate for record display
+            const totalMatches = debater.wins + debater.losses;
+            const winRate = totalMatches > 0 ? ((debater.wins / totalMatches) * 100).toFixed(0) : '0';
+            const recordText = `${debater.wins}-${debater.losses} (${winRate}%)`;
+
+            switch (debater.tier) {
+                case 'High Tier':
+                    rankDisplay = highTierRank++;
+                    break;
+                case 'Mid Tier':
+                    rankDisplay = midTierRank++;
+                    break;
+                case 'Low Tier':
+                    rankDisplay = lowTierRank++;
+                    break;
+                default:
+                    rankDisplay = '-';
+            }
+
+            row.innerHTML = `
+                <td>${rankDisplay}</td>
+                <td><img src="${debater.photo}" width="50" height="50" class="rounded-circle object-fit-cover leaderboard-avatar" alt="${debater.name}" onerror="onImageError(this)"></td>
+                <td><a href="#profile/${debater.id}" class="text-decoration-none">${debater.name}</a></td>
+                <td><img src="${debater.flag}" width="24" class="me-2" alt="${debater.country_code} flag"/> ${debater.country}</td>
+                <td><span class="badge ${debater.wins > debater.losses ? 'bg-success' : 'bg-danger'}">${recordText}</span></td>
+            `;
+
+            if (debater.tier === 'High Tier') {
+                highTierBody.appendChild(row);
+            } else if (debater.tier === 'Mid Tier') {
+                midTierBody.appendChild(row);
+            } else if (debater.tier === 'Low Tier') {
+                lowTierBody.appendChild(row);
+            }
+        });
+
+        // Add "no data" rows if a section is empty
+        if (highTierBody.children.length === 0) {
+            highTierBody.innerHTML = '<tr><td colspan="5" class="text-muted">No High Tier debaters found for current filters.</td></tr>';
+        }
+        if (midTierBody.children.length === 0) {
+            midTierBody.innerHTML = '<tr><td colspan="5" class="text-muted">No Mid Tier debaters found for current filters.</td></tr>';
+        }
+        if (lowTierBody.children.length === 0) {
+            lowTierBody.innerHTML = '<tr><td colspan="5" class="text-muted">No Low Tier debaters found for current filters.</td></tr>';
         }
 
-        const highTier = sortTier(filteredDebaters.filter(d => d.tier === 'High Tier'));
-        const midTier = sortTier(filteredDebaters.filter(d => d.tier === 'Mid Tier'));
-        const lowTier = sortTier(filteredDebaters.filter(d => d.tier === 'Low Tier'));
-
-        function populateTier(tbody, tierList) {
-            if (tierList.length === 0 && (query !== '' || filterTier !== '' || filterCountry !== '')) {
-                tbody.innerHTML = `<tr><td colspan="5" class="text-muted">No debaters found in this tier matching your filters.</td></tr>`;
-                return;
-            }
-            const minRows = Math.max(tierList.length, 5); // Ensure at least 5 rows for consistent table height
-            for (let i = 0; i < minRows; i++) {
-                const debater = tierList[i];
-                if (debater) {
-                    tbody.innerHTML += `
-                        <tr>
-                            <td>${i + 1}</td>
-                            <td><img src="${debater.photo}" width="40" class="rounded-circle" alt="${debater.name} photo" loading="lazy" onerror="onImageError(this)"></td>
-                            <td><a href="#profile/${debater.id}" class="text-decoration-none">${debater.name}</a></td>
-                            <td><img src="${debater.flag}" width="20" class="me-1" alt="${debater.country_code} flag"> ${debater.country_code}</td>
-                            <td><span class="badge ${debater.wins > debater.losses ? 'bg-success' : 'bg-danger'}">${debater.record}</span></td>
-                        </tr>
-                    `;
-                } else {
-                    // Populate empty rows if there are fewer than minRows debaters
-                    tbody.innerHTML += `<tr><td>${i + 1}</td><td></td><td></td><td></td><td></td></tr>`;
-                }
-            }
-        }
-
-        populateTier(highTierBody, highTier);
-        populateTier(midTierBody, midTier);
-        populateTier(lowTierBody, lowTier);
-
-        // Update sort icons and aria-sort attributes
-        document.querySelectorAll('.table thead th[data-sort]').forEach(th => {
-            const icon = th.querySelector('.sort-icon');
-            if (icon) {
-                icon.classList.remove('fa-sort-up', 'fa-sort-down', 'fa-sort');
-                if (th.dataset.sort === sortColumn) {
-                    icon.classList.add(sortOrder === 'asc' ? 'fa-sort-up' : 'fa-sort-down');
-                    th.setAttribute('aria-sort', sortOrder);
-                } else {
-                    icon.classList.add('fa-sort');
-                    th.setAttribute('aria-sort', 'none');
-                }
+        // Update sort icons
+        document.querySelectorAll('#leaderboard table thead th[data-sort]').forEach(th => {
+            th.classList.remove('sorted-asc', 'sorted-desc');
+            th.setAttribute('aria-sort', 'none');
+            if (th.dataset.sort === currentLeaderboardSort.column) {
+                th.classList.add(`sorted-${currentLeaderboardSort.order}`);
+                th.setAttribute('aria-sort', currentLeaderboardSort.order);
             }
         });
     }
 
+
     /**
-     * Renders a bar chart showing debater distribution by tier.
+     * Renders the overall statistics chart for debaters.
      * @param {Array<Object>} debaters - Array of debater data.
      */
     function renderOverallStatsChart(debaters) {
         const ctx = document.getElementById('overallStatsChart');
         if (!ctx) return;
 
-        // Destroy previous chart instance if exists
-        if (Chart.getChart(ctx)) {
-            Chart.getChart(ctx).destroy();
+        // Destroy existing chart instance if it exists
+        if (overallStatsChartInstance) {
+            overallStatsChartInstance.destroy();
         }
 
         const tierCounts = debaters.reduce((acc, debater) => {
             acc[debater.tier] = (acc[debater.tier] || 0) + 1;
             return acc;
-        }, {});
+        }, { 'High Tier': 0, 'Mid Tier': 0, 'Low Tier': 0 }); // Initialize to ensure all tiers appear
 
-        // You could also generate a pie chart for country distribution if desired
-        // const countryCounts = debaters.reduce((acc, debater) => {
-        //     acc[debater.country] = (acc[debater.country] || 0) + 1;
-        //     return acc;
-        // }, {});
+        const labels = Object.keys(tierCounts);
+        const data = Object.values(tierCounts);
 
-        new Chart(ctx, {
+        overallStatsChartInstance = new Chart(ctx, {
             type: 'bar',
             data: {
-                labels: Object.keys(tierCounts),
-                datasets: [
-                    {
-                        label: 'Debaters per Tier',
-                        data: Object.values(tierCounts),
-                        backgroundColor: ['#ffc107', '#6c757d', '#343a40'], // Warning (High), Secondary (Mid), Dark (Low)
-                        borderColor: ['#e0a800', '#5a6268', '#23272b'],
-                        borderWidth: 1
-                    }
-                ]
+                labels: labels,
+                datasets: [{
+                    label: 'Number of Debaters',
+                    data: data,
+                    backgroundColor: [
+                        'rgba(255, 193, 7, 0.7)',  // Warning (Yellow)
+                        'rgba(108, 117, 125, 0.7)', // Secondary (Grey)
+                        'rgba(33, 37, 41, 0.7)'    // Dark (Black)
+                    ],
+                    borderColor: [
+                        'rgba(255, 193, 7, 1)',
+                        'rgba(108, 117, 125, 1)',
+                        'rgba(33, 37, 41, 1)'
+                    ],
+                    borderWidth: 1
+                }]
             },
             options: {
                 responsive: true,
@@ -772,18 +848,42 @@ document.addEventListener('DOMContentLoaded', () => {
                     title: {
                         display: true,
                         text: 'Debaters Distribution by Tier',
-                        font: { size: 16, family: 'Poppins' }
+                        font: { size: 16, weight: 'bold' }
                     },
-                    legend: { display: false }
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                label += context.raw;
+                                return label;
+                            }
+                        }
+                    }
                 },
                 scales: {
                     y: {
                         beginAtZero: true,
-                        ticks: { stepSize: 1 },
-                        grid: { display: false }
+                        ticks: {
+                            callback: function(value) { if (Number.isInteger(value)) { return value; } }, // Show whole numbers only
+                            color: '#6c757d'
+                        },
+                        grid: {
+                            color: 'rgba(0,0,0,0.1)'
+                        }
                     },
                     x: {
-                        grid: { display: false }
+                        ticks: {
+                            color: '#212529'
+                        },
+                        grid: {
+                            display: false
+                        }
                     }
                 }
             }
@@ -798,47 +898,72 @@ document.addEventListener('DOMContentLoaded', () => {
         const recentMatchesSection = document.getElementById('recentMatchesSection');
         if (!recentMatchesSection) return;
 
-        let html = '';
+        // Sort matches by date (newest first) and take the latest 6
         const sortedMatches = [...matches].sort((a, b) => {
-            const dateA = a.date ? new Date(a.date) : 0;
-            const dateB = b.date ? new Date(b.date) : 0;
-            if (dateA && dateB) return dateB - dateA; // Newest first
-            return b.id.localeCompare(a.id);
-        });
+            const dateA = a.date ? new Date(a.date) : new Date(0);
+            const dateB = b.date ? new Date(b.date) : new Date(0);
+            return dateB.getTime() - dateA.getTime();
+        }).slice(0, 6);
 
-        // Display only the 3 most recent matches
-        sortedMatches.slice(0, 3).forEach(match => {
-            // Find full debater objects for more complete data like photos
-            const debater1Full = allDebatersData.find(d => d.id === match.debater1.id) || match.debater1;
-            const debater2Full = allDebatersData.find(d => d.id === match.debater2.id) || match.debater2;
+        let html = '';
+        if (sortedMatches.length > 0) {
+            sortedMatches.forEach(match => {
+                const debater1 = allDebatersData.find(d => d.id === match.debater1.id) || match.debater1;
+                const debater2 = allDebatersData.find(d => d.id === match.debater2.id) || match.debater2;
 
-            html += `
-                <div class="col-lg-4 col-md-6 col-sm-12 animate__animated animate__fadeInUp">
-                    <div class="card match-card h-100">
-                        <img src="${match.image}" class="match-img-16by9 card-img-top" alt="${debater1Full.name} vs ${debater2Full.name} Match Image" loading="lazy" onerror="onImageError(this)">
-                        <div class="card-body text-center d-flex flex-column">
-                            <h5 class="card-title fw-bold">
-                                <img src="${debater1Full.flag}" width="20" alt="${debater1Full.country_code} flag"> <i class="fas fa-fist-raised mx-2" style="color:#FFD700;"></i> <img src="${debater2Full.flag}" width="20" alt="${debater2Full.country_code} flag">
-                            </h5>
-                            <div class="debater-info mb-1">
-                                <strong>${debater1Full.name} (${match.debater1.character})</strong> <span class="badge ${match.winner === debater1Full.name ? 'bg-success' : 'bg-danger'}">${match.winner === debater1Full.name ? 'WIN' : 'LOSS'}</span>
+                const winnerName = match.winner;
+                const winnerBadgeClass = winnerName === debater1.name ? 'bg-primary' : 'bg-danger'; // Assuming primary for D1, danger for D2 winner
+                const winnerPhoto = winnerName === debater1.name ? debater1.photo : debater2.photo;
+
+                const matchDate = match.date ? new Date(match.date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : 'N/A';
+
+                html += `
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card shadow match-card h-100 animate__animated animate__fadeInUp">
+                            <div class="card-header text-center bg-primary text-white">
+                                <h5 class="mb-0">Match ID: ${match.id}</h5>
                             </div>
-                            <div class="debater-info">
-                                <strong>${debater2Full.name} (${match.debater2.character})</strong> <span class="badge ${match.winner === debater2Full.name ? 'bg-success' : 'bg-danger'}">${match.winner === debater2Full.name ? 'WIN' : 'LOSS'}</span>
+                            <div class="card-body text-center">
+                                <div class="d-flex justify-content-around align-items-center mb-3">
+                                    <div class="debater-info">
+                                        <a href="#profile/${debater1.id}" class="text-decoration-none text-dark">
+                                            <img src="${debater1.photo}" class="rounded-circle match-avatar" alt="${debater1.name}" onerror="onImageError(this)">
+                                            <p class="mb-0 fw-bold">${debater1.name}</p>
+                                        </a>
+                                        <small class="text-muted">${debater1.character}</small>
+                                    </div>
+                                    <span class="vs-text fw-bold mx-2">VS</span>
+                                    <div class="debater-info">
+                                        <a href="#profile/${debater2.id}" class="text-decoration-none text-dark">
+                                            <img src="${debater2.photo}" class="rounded-circle match-avatar" alt="${debater2.name}" onerror="onImageError(this)">
+                                            <p class="mb-0 fw-bold">${debater2.name}</p>
+                                        </a>
+                                        <small class="text-muted">${debater2.character}</small>
+                                    </div>
+                                </div>
+                                <p class="card-text mb-1">
+                                    <i class="fas fa-trophy me-1"></i> Winner: <span class="badge ${winnerBadgeClass}">${winnerName}</span>
+                                </p>
+                                <p class="card-text mb-1"><i class="fas fa-gavel me-1"></i> Method: ${match.method}</p>
+                                <p class="card-text"><i class="fas fa-calendar-alt me-1"></i> Date: ${matchDate}</p>
+                                ${match.event ? `<p class="card-text"><i class="fas fa-calendar-check me-1"></i> Event: ${match.event}</p>` : ''}
                             </div>
-                            <small class="text-muted mt-2 d-block">Method: ${match.method} ${match.event ? `(Event: ${match.event})` : ''}</small>
-                            <a href="#profile/${debater1Full.id}" class="btn btn-sm btn-outline-info mt-auto mx-auto" style="width: fit-content;" aria-label="View ${debater1Full.name}'s profile">View ${debater1Full.name} Profile</a>
-                             <a href="#profile/${debater2Full.id}" class="btn btn-sm btn-outline-info mt-2 mx-auto" style="width: fit-content;" aria-label="View ${debater2Full.name}'s profile">View ${debater2Full.name} Profile</a>
                         </div>
                     </div>
+                `;
+            });
+        } else {
+            html = `
+                <div class="col-12 text-center text-muted animate__animated animate__fadeIn">
+                    <p><i class="fas fa-info-circle me-2"></i> No recent matches available.</p>
                 </div>
             `;
-        });
+        }
         recentMatchesSection.innerHTML = html;
     }
 
     /**
-     * Renders the latest match history for each debater.
+     * Renders a simplified individual match history section on the homepage.
      * @param {Array<Object>} debaters - Array of debater data.
      * @param {Array<Object>} matches - Array of match data.
      */
@@ -847,38 +972,53 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!individualMatchHistorySection) return;
 
         let html = '';
-        debaters.forEach(debater => {
+        // Display a few latest matches for 3-5 random debaters for demonstration
+        const debatersToShow = debaters.sort(() => 0.5 - Math.random()).slice(0, 5); // Pick 5 random debaters
+
+        if (debatersToShow.length === 0) {
+            individualMatchHistorySection.innerHTML = `<div class="col-12 text-center text-muted"><p>No debaters to display match history for.</p></div>`;
+            return;
+        }
+
+        debatersToShow.forEach(debater => {
             const debaterMatches = matches.filter(match =>
                 match.debater1.id === debater.id || match.debater2.id === debater.id
             ).sort((a, b) => {
-                const dateA = a.date ? new Date(a.date) : 0;
-                const dateB = b.date ? new Date(b.date) : 0;
-                if (dateA && dateB) return dateB - dateA; // Newest first
-                return b.id.localeCompare(a.id);
-            });
+                const dateA = a.date ? new Date(a.date) : new Date(0);
+                const dateB = b.date ? new Date(b.date) : new Date(0);
+                return dateB.getTime() - dateA.getTime();
+            }).slice(0, 2); // Show only the 2 latest matches per debater
 
             if (debaterMatches.length > 0) {
-                const latestMatch = debaterMatches[0];
-                const isWinner = latestMatch.winner === debater.name;
-                const opponent = latestMatch.debater1.id === debater.id ? latestMatch.debater2 : latestMatch.debater1;
-                const statusText = isWinner ? 'Win' : 'Loss';
-                const cardClass = isWinner ? 'win-card' : 'loss-card';
-
-                const opponentDebater = debaters.find(d => d.id === opponent.id);
-                const opponentPhoto = opponentDebater ? opponentDebater.photo : 'assets/default_avatar.png';
-
                 html += `
-                    <div class="col-md-6 animate__animated animate__fadeInUp">
-                        <div class="card shadow ${cardClass} h-100">
-                            <div class="card-body d-flex align-items-center">
-                                <img src="${debater.photo}" class="me-3 rounded debater-thumbnail" alt="${debater.name} photo" loading="lazy" onerror="onImageError(this)">
-                                <div class="flex-grow-1">
-                                    <h5 class="fw-bold">${debater.name} <img src="${debater.flag}" width="20" class="ms-1 flag-icon" alt="${debater.country_code} flag"></h5>
-                                    <p class="mb-1">Record: <span class="badge ${debater.wins > debater.losses ? 'bg-success' : 'bg-danger'}">${debater.record}</span></p>
-                                    <p class="mb-0">${statusText} vs ${opponent.name} [${latestMatch.method}]</p>
-                                </div>
-                                <img src="${opponentPhoto}" width="40" class="ms-3 rounded-circle" alt="${opponent.name} photo" loading="lazy" onerror="onImageError(this)">
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card shadow h-100 animate__animated animate__fadeInUp">
+                            <div class="card-header bg-dark text-white d-flex align-items-center">
+                                <img src="${debater.photo}" width="40" height="40" class="rounded-circle me-2 object-fit-cover" alt="${debater.name}" onerror="onImageError(this)">
+                                <h5 class="mb-0 flex-grow-1">${debater.name}'s Latest Matches</h5>
+                                <a href="#profile/${debater.id}" class="btn btn-sm btn-outline-light ms-auto">View All</a>
                             </div>
+                            <ul class="list-group list-group-flush">
+                `;
+                debaterMatches.forEach(match => {
+                    const isWinner = match.winner === debater.name;
+                    const opponent = match.debater1.id === debater.id ? match.debater2 : match.debater1;
+                    const statusBadgeClass = isWinner ? 'bg-success' : 'bg-danger';
+                    const statusText = isWinner ? 'WIN' : 'LOSS';
+                    const matchDate = match.date ? new Date(match.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'N/A';
+
+                    html += `
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <span class="badge ${statusBadgeClass}">${statusText}</span> vs <a href="#profile/${opponent.id}" class="text-decoration-none">${opponent.name}</a>
+                                <br><small class="text-muted">${match.method} - ${matchDate}</small>
+                            </div>
+                            <img src="${(allDebatersData.find(d => d.id === opponent.id) || {}).photo || 'assets/default_avatar.png'}" width="30" height="30" class="rounded-circle object-fit-cover" alt="${opponent.name}" onerror="onImageError(this)">
+                        </li>
+                    `;
+                });
+                html += `
+                            </ul>
                         </div>
                     </div>
                 `;
@@ -887,7 +1027,8 @@ document.addEventListener('DOMContentLoaded', () => {
         individualMatchHistorySection.innerHTML = html;
     }
 
-    // --- Event Listener Attachments (for HomePage) ---
+
+    // --- Event Listeners and Routing ---
 
     /**
      * Attaches event listeners for elements on the home page.
@@ -895,136 +1036,170 @@ document.addEventListener('DOMContentLoaded', () => {
      * @param {Array<Object>} matches - Array of match data.
      */
     function attachHomePageEventListeners(debaters, matches) {
-        // Leaderboard Search & Filters
-        const leaderboardSearchInput = document.getElementById('leaderboardSearch');
-        const tierFilterSelect = document.getElementById('tierFilter');
-        const countryFilterSelect = document.getElementById('countryFilter');
-
-        const applyLeaderboardFilters = () => {
-            const query = leaderboardSearchInput ? leaderboardSearchInput.value : '';
-            const tier = tierFilterSelect ? tierFilterSelect.value : '';
-            const country = countryFilterSelect ? countryFilterSelect.value : '';
-            renderLeaderboard(debaters, query, tier, country, currentLeaderboardSort.column, currentLeaderboardSort.order);
-        };
-
-        if (leaderboardSearchInput) leaderboardSearchInput.addEventListener('keyup', applyLeaderboardFilters);
-        if (tierFilterSelect) tierFilterSelect.addEventListener('change', applyLeaderboardFilters);
-        if (countryFilterSelect) countryFilterSelect.addEventListener('change', applyLeaderboardFilters);
-
         // Debater Profile Search
-        const debaterProfileSearchInput = document.getElementById('debaterProfileSearch');
-        if (debaterProfileSearchInput) {
-            debaterProfileSearchInput.addEventListener('keyup', (event) => {
+        const debaterProfileSearch = document.getElementById('debaterProfileSearch');
+        if (debaterProfileSearch) {
+            debaterProfileSearch.addEventListener('input', (event) => {
                 renderDetailedProfiles(debaters, event.target.value);
             });
         }
 
-        // Leaderboard Sorting
-        document.querySelectorAll('.table thead th[data-sort]').forEach(header => {
-            header.addEventListener('click', () => {
-                const sortColumn = header.dataset.sort;
-                // Toggle sort order based on current column and order
-                if (currentLeaderboardSort.column === sortColumn) {
-                    currentLeaderboardSort.order = currentLeaderboardSort.order === 'asc' ? 'desc' : 'asc';
-                } else {
-                    currentLeaderboardSort.column = sortColumn;
-                    currentLeaderboardSort.order = 'asc'; // Default to ascending when changing column
-                }
-                applyLeaderboardFilters(); // Re-render with new sort
-            });
-        });
-    }
+        // Leaderboard Filters & Search
+        const leaderboardSearch = document.getElementById('leaderboardSearch');
+        const tierFilter = document.getElementById('tierFilter');
+        const countryFilter = document.getElementById('countryFilter');
 
-    // --- Comparison Page Logic ---
-
-    /**
-     * Renders the comparison chart and debater comparison cards.
-     * @param {Object|null} debater1 - The first debater object.
-     * @param {Object|null} debater2 - The second debater object.
-     */
-    function renderComparisonChart(debater1, debater2) {
-        const comparisonResultsDiv = document.getElementById('comparisonResults');
-        if (!comparisonResultsDiv) return;
-
-        if (!debater1 || !debater2) {
-            comparisonResultsDiv.innerHTML = `
-                <div class="col-12 text-center text-muted animate__animated animate__fadeIn">
-                    <p><i class="fas fa-info-circle me-2"></i> Select two debaters above to compare their profiles.</p>
-                </div>
-            `;
-            // Destroy previous chart instance if it exists when no debaters are selected
-            if (comparisonChartInstance) {
-                comparisonChartInstance.destroy();
-                comparisonChartInstance = null;
-            }
-            return;
+        if (leaderboardSearch) {
+            leaderboardSearch.addEventListener('input', () => renderLeaderboard(debaters));
+        }
+        if (tierFilter) {
+            tierFilter.addEventListener('change', () => renderLeaderboard(debaters));
+        }
+        if (countryFilter) {
+            countryFilter.addEventListener('change', () => renderLeaderboard(debaters));
         }
 
-        // Destroy previous chart instance if exists
+        // Leaderboard Sorting
+        document.querySelectorAll('#leaderboard table thead th[data-sort]').forEach(header => {
+            header.addEventListener('click', () => {
+                const column = header.dataset.sort;
+                let order = 'asc';
+                if (currentLeaderboardSort.column === column) {
+                    order = currentLeaderboardSort.order === 'asc' ? 'desc' : 'asc';
+                }
+                currentLeaderboardSort = { column, order };
+                renderLeaderboard(debaters);
+            });
+        });
+
+        // Ensure Chart.js instances are destroyed before re-rendering new ones
+        if (overallStatsChartInstance) {
+            overallStatsChartInstance.destroy();
+            overallStatsChartInstance = null;
+        }
+    }
+
+
+    /**
+     * Attaches event listeners for elements on the compare page.
+     * @param {Array<Object>} debaters - Array of debater data.
+     */
+    function attachComparePageEventListeners(debaters) {
+        const debaterSelect1 = document.getElementById('debaterSelect1');
+        const debaterSelect2 = document.getElementById('debaterSelect2');
+
+        const updateComparison = () => {
+            const id1 = debaterSelect1?.value;
+            const id2 = debaterSelect2?.value;
+            compareDebaters(id1, id2, debaters);
+        };
+
+        if (debaterSelect1) {
+            debaterSelect1.addEventListener('change', updateComparison);
+        }
+        if (debaterSelect2) {
+            debaterSelect2.addEventListener('change', updateComparison);
+        }
+    }
+
+
+    /**
+     * Compares two debaters and renders their metrics.
+     * @param {string} id1 - ID of the first debater.
+     * @param {string} id2 - ID of the second debater.
+     * @param {Array<Object>} debaters - Array of debater data.
+     */
+    function compareDebaters(id1, id2, debaters) {
+        const comparisonResults = document.getElementById('comparisonResults');
+        if (!comparisonResults) return;
+
+        // Destroy previous chart instance if it exists
         if (comparisonChartInstance) {
             comparisonChartInstance.destroy();
             comparisonChartInstance = null;
         }
 
-        const labels = Object.keys(debater1.metrics);
-        const data1 = Object.values(debater1.metrics).map(score => parseFloat(score));
-        const data2 = Object.values(debater2.metrics).map(score => parseFloat(score));
+        if (!id1 || !id2) {
+            comparisonResults.innerHTML = `
+                <div class="col-12 text-center text-muted">
+                    <p><i class="fas fa-info-circle me-2"></i> Select two debaters above to compare their profiles.</p>
+                </div>
+            `;
+            return;
+        }
 
-        const comparisonHtml = `
-            <div class="col-12 text-center animate__animated animate__fadeIn">
-                <h4 class="mb-4">Metrics Comparison</h4>
-                <div class="comparison-chart-container">
-                    <canvas id="comparisonRadarChart" height="300"></canvas>
+        const debater1 = debaters.find(d => d.id === id1);
+        const debater2 = debaters.find(d => d.id === id2);
+
+        if (!debater1 || !debater2) {
+            comparisonResults.innerHTML = `
+                <div class="col-12 text-center text-danger">
+                    <p><i class="fas fa-exclamation-triangle me-2"></i> One or both selected debaters not found.</p>
+                </div>
+            `;
+            return;
+        }
+
+        const metrics1 = debater1.metrics;
+        const metrics2 = debater2.metrics;
+
+        const labels = Object.keys(metrics1); // Assuming both have same metric keys
+        const data1 = Object.values(metrics1).map(Number);
+        const data2 = Object.values(metrics2).map(Number);
+
+        // Calculate Win Rates and Total Matches
+        const totalMatches1 = debater1.wins + debater1.losses;
+        const winRate1 = totalMatches1 > 0 ? ((debater1.wins / totalMatches1) * 100).toFixed(2) : '0.00';
+        const totalMatches2 = debater2.wins + debater2.losses;
+        const winRate2 = totalMatches2 > 0 ? ((debater2.wins / totalMatches2) * 100).toFixed(2) : '0.00';
+
+        const compareHtml = `
+            <div class="col-md-6 text-center animate__animated animate__fadeInLeft">
+                <div class="card shadow p-3 h-100">
+                    <img src="${debater1.photo}" class="compare-avatar mb-3" alt="${debater1.name}" onerror="onImageError(this)">
+                    <h5>${debater1.name} <img src="${debater1.flag}" width="24" class="ms-2" alt="${debater1.country_code} flag"/></h5>
+                    <p>Record: <span class="badge ${debater1.wins > debater1.losses ? 'bg-success' : 'bg-danger'}">${debater1.record}</span></p>
+                    <p>Win Rate: ${winRate1}% | Total Matches: ${totalMatches1}</p>
+                    <p>Character: ${debater1.character}</p>
                 </div>
             </div>
-            <div class="col-md-6 mt-4 debater-compare-card animate__animated animate__fadeInLeft">
+            <div class="col-md-6 text-center animate__animated animate__fadeInRight">
                 <div class="card shadow p-3 h-100">
-                    <img src="${debater1.photo}" class="profile-avatar mb-2" alt="${debater1.name} photo" onerror="onImageError(this)">
-                    <h5>${debater1.name} <img src="${debater1.flag}" width="20" class="ms-1" alt="${debater1.country_code} flag"></h5>
-                    <p class="mb-1">Record: <span class="badge ${debater1.wins > debater1.losses ? 'bg-success' : 'bg-danger'}">${debater1.record}</span></p>
-                    <p class="text-muted"><i class="fas fa-percentage me-1"></i> Win Rate: ${((debater1.wins / (debater1.wins + debater1.losses)) * 100).toFixed(2)}%</p>
-                    <hr>
-                    <small><strong>Favorite Character:</strong> ${debater1.character}</small>
-                </div>
-            </div>
-            <div class="col-md-6 mt-4 debater-compare-card animate__animated animate__fadeInRight">
-                <div class="card shadow p-3 h-100">
-                    <img src="${debater2.photo}" class="profile-avatar mb-2" alt="${debater2.name} photo" onerror="onImageError(this)">
-                    <h5>${debater2.name} <img src="${debater2.flag}" width="20" class="ms-1" alt="${debater2.country_code} flag"></h5>
-                    <p class="mb-1">Record: <span class="badge ${debater2.wins > debater2.losses ? 'bg-success' : 'bg-danger'}">${debater2.record}</span></p>
-                    <p class="text-muted"><i class="fas fa-percentage me-1"></i> Win Rate: ${((debater2.wins / (debater2.wins + debater2.losses)) * 100).toFixed(2)}%</p>
-                    <hr>
-                    <small><strong>Favorite Character:</strong> ${debater2.character}</small>
+                    <img src="${debater2.photo}" class="compare-avatar mb-3" alt="${debater2.name}" onerror="onImageError(this)">
+                    <h5>${debater2.name} <img src="${debater2.flag}" width="24" class="ms-2" alt="${debater2.country_code} flag"/></h5>
+                    <p>Record: <span class="badge ${debater2.wins > debater2.losses ? 'bg-success' : 'bg-danger'}">${debater2.record}</span></p>
+                    <p>Win Rate: ${winRate2}% | Total Matches: ${totalMatches2}</p>
+                    <p>Character: ${debater2.character}</p>
                 </div>
             </div>
             <div class="col-12 mt-4 animate__animated animate__fadeInUp">
-                <h4 class="text-center mb-3">Head-to-Head Matches <i class="fas fa-handshake ms-2"></i></h4>
-                <div class="row g-3 profile-match-history" id="headToHeadMatches">
+                <div class="card shadow p-4">
+                    <h4 class="text-center mb-3">Metric Comparison</h4>
+                    <canvas id="comparisonChart" height="300"></canvas>
                 </div>
             </div>
         `;
-        comparisonResultsDiv.innerHTML = comparisonHtml;
+        comparisonResults.innerHTML = compareHtml;
 
-        // Render the radar chart
-        const ctx = document.getElementById('comparisonRadarChart');
+        const ctx = document.getElementById('comparisonChart');
         if (ctx) {
             comparisonChartInstance = new Chart(ctx, {
                 type: 'radar',
                 data: {
-                    labels: labels,
+                    labels: labels.map(label => label.replace(/([A-Z])/g, ' $1').trim()), // Make labels readable
                     datasets: [
                         {
                             label: debater1.name,
                             data: data1,
-                            backgroundColor: 'rgba(13, 110, 253, 0.2)', // Blue
+                            backgroundColor: 'rgba(13, 110, 253, 0.2)',
                             borderColor: 'rgba(13, 110, 253, 1)',
                             borderWidth: 1
                         },
                         {
                             label: debater2.name,
                             data: data2,
-                            backgroundColor: 'rgba(255, 99, 132, 0.2)', // Red
-                            borderColor: 'rgba(255, 99, 132, 1)',
+                            backgroundColor: 'rgba(220, 53, 69, 0.2)', // Bootstrap danger red with alpha
+                            borderColor: 'rgba(220, 53, 69, 1)',
                             borderWidth: 1
                         }
                     ]
@@ -1037,13 +1212,26 @@ document.addEventListener('DOMContentLoaded', () => {
                             angleLines: { display: false },
                             suggestedMin: 0,
                             suggestedMax: 10,
-                            ticks: { stepSize: 2, backdropColor: 'transparent', color: '#6c757d' },
-                            pointLabels: { color: '#212529', font: { size: 12 } },
+                            ticks: {
+                                stepSize: 2,
+                                backdropColor: 'transparent',
+                                color: '#6c757d'
+                            },
+                            pointLabels: {
+                                color: '#212529',
+                                font: { size: 12 }
+                            },
                             grid: { color: 'rgba(0,0,0,0.1)' }
                         }
                     },
                     plugins: {
-                        legend: { position: 'top' },
+                        legend: {
+                            display: true,
+                            position: 'bottom',
+                            labels: {
+                                color: '#333'
+                            }
+                        },
                         tooltip: {
                             callbacks: {
                                 label: function(context) {
@@ -1055,136 +1243,53 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
         }
+    }
 
-        // Render head-to-head matches
-        const headToHeadMatchesDiv = document.getElementById('headToHeadMatches');
-        if (headToHeadMatchesDiv) {
-            const h2hMatches = allMatchesData.filter(match =>
-                (match.debater1.id === debater1.id && match.debater2.id === debater2.id) ||
-                (match.debater1.id === debater2.id && match.debater2.id === debater1.id)
-            ).sort((a, b) => {
-                const dateA = a.date ? new Date(a.date) : 0;
-                const dateB = b.date ? new Date(b.date) : 0;
-                if (dateA && dateB) return dateB - dateA;
-                return b.id.localeCompare(a.id);
+    /**
+     * Handles URL hash changes for routing.
+     */
+    async function handleLocationHash() {
+        const hash = window.location.hash;
+        if (hash.startsWith('#profile/')) {
+            const debaterId = hash.substring(9); // Get ID after '#profile/'
+            if (allDebatersData.length === 0 || allMatchesData.length === 0) {
+                const data = await fetchData();
+                if (!data) return; // Stop if data fetching failed
+            }
+            renderProfilePage(debaterId, allDebatersData, allMatchesData);
+        } else if (hash === '#compare') {
+            if (allDebatersData.length === 0) {
+                const data = await fetchData();
+                if (!data) return;
+            }
+            renderComparePage(allDebatersData);
+        }
+        else { // Default to home
+            if (allDebatersData.length === 0 || allMatchesData.length === 0) {
+                const data = await fetchData();
+                if (!data) return;
+            }
+            renderHomePage(allDebatersData, allMatchesData);
+        }
+    }
+
+    // --- Initial Load ---
+
+    // Load data and render initial page based on hash
+    fetchData().then(() => {
+        handleLocationHash();
+        window.addEventListener('hashchange', handleLocationHash);
+
+        // Add event listener for navigation links
+        document.querySelectorAll('.navbar-nav .nav-link').forEach(link => {
+            link.addEventListener('click', (event) => {
+                event.preventDefault();
+                const targetHash = event.target.getAttribute('href');
+                if (targetHash) {
+                    window.location.hash = targetHash;
+                }
             });
-
-            let h2hHtml = '';
-            if (h2hMatches.length > 0) {
-                h2hMatches.forEach(match => {
-                    const winnerDebater = (match.winner === debater1.name) ? debater1 : debater2;
-                    const loserDebater = (match.winner === debater1.name) ? debater2 : debater1;
-
-                    // Ensure opponent photos are correctly retrieved from allDebatersData
-                    const winnerPhoto = allDebatersData.find(d => d.name === winnerDebater.name)?.photo || 'assets/default_avatar.png';
-                    const loserPhoto = allDebatersData.find(d => d.name === loserDebater.name)?.photo || 'assets/default_avatar.png';
-
-                    const matchDate = match.date ? new Date(match.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'Unknown Date';
-
-                    h2hHtml += `
-                        <div class="col-12">
-                            <div class="card shadow p-3 mb-2 d-flex flex-row align-items-center animate__animated animate__fadeIn">
-                                <img src="${winnerPhoto}" width="50" class="rounded-circle me-3" alt="${winnerDebater.name} photo" onerror="onImageError(this)">
-                                <div class="flex-grow-1">
-                                    <h6 class="mb-1 fw-bold">${winnerDebater.name} <span class="badge bg-success">WIN</span> vs ${loserDebater.name}</h6>
-                                    <small class="text-muted">Method: ${match.method} - Character: ${winnerDebater.character} vs ${loserDebater.character}</small><br>
-                                    <small class="text-muted"><i class="fas fa-calendar-alt me-1"></i> Date: ${matchDate} ${match.event ? `(Event: ${match.event})` : ''}</small>
-                                </div>
-                                <img src="${loserPhoto}" width="50" class="rounded-circle ms-3" alt="${loserDebater.name} photo" onerror="onImageError(this)">
-                            </div>
-                        </div>
-                    `;
-                });
-            } else {
-                h2hHtml = `<div class="col-12"><p class="text-center text-muted">No head-to-head matches found between ${debater1.name} and ${debater2.name}.</p></div>`;
-            }
-            headToHeadMatchesDiv.innerHTML = h2hHtml;
-        }
-    }
-
-    /**
-     * Attaches event listeners for elements on the comparison page.
-     * @param {Array<Object>} debaters - Array of debater data.
-     */
-    function attachComparePageEventListeners(debaters) {
-        const debaterSelect1 = document.getElementById('debaterSelect1');
-        const debaterSelect2 = document.getElementById('debaterSelect2');
-
-        const updateComparison = () => {
-            const id1 = debaterSelect1.value;
-            const id2 = debaterSelect2.value;
-
-            const debater1 = debaters.find(d => d.id === id1);
-            const debater2 = debaters.find(d => d.id === id2);
-
-            if (id1 && id2 && id1 === id2) {
-                showToast('Please select two different debaters for comparison.', 'warning');
-                renderComparisonChart(null, null); // Clear chart and message
-                return;
-            }
-            renderComparisonChart(debater1, debater2);
-        };
-
-        if (debaterSelect1) debaterSelect1.addEventListener('change', updateComparison);
-        if (debaterSelect2) debaterSelect2.addEventListener('change', updateComparison);
-    }
-
-
-    // --- Router Logic ---
-
-    /**
-     * Handles routing based on the URL hash.
-     */
-    function router() {
-        const path = window.location.hash.slice(1) || 'home';
-        const [route, id] = path.split('/');
-
-        // Show spinner while loading content, only if we are changing "pages"
-        const appRoot = document.getElementById('app-root');
-        if (appRoot) {
-             appRoot.innerHTML = `
-                <div class="container d-flex justify-content-center align-items-center" style="min-height: 80vh;">
-                    <div class="text-center">
-                        <div class="spinner-border text-primary" role="status" aria-hidden="true">
-                            <span class="visually-hidden">Loading content...</span>
-                        </div>
-                        <p class="mt-3" role="status">Loading content...</p>
-                    </div>
-                </div>
-            `;
-        }
-
-        fetchData().then(data => {
-            if (!data) return; // Exit if data fetching failed
-
-            if (route === 'home' || route === '') {
-                renderHomePage(data.debaters, data.matches);
-                document.title = 'DBA - Home';
-            } else if (route === 'profile' && id) {
-                renderProfilePage(id, data.debaters, data.matches);
-            } else if (route === 'compare') {
-                renderComparePage(data.debaters);
-                document.title = 'DBA - Compare Debaters';
-            }
-            else {
-                // 404 Not Found
-                setAppContent(`
-                    <div class="container my-5 text-center text-danger animate__animated animate__fadeIn">
-                        <i class="fas fa-exclamation-triangle fa-3x mb-3"></i>
-                        <h2>Page Not Found!</h2>
-                        <p>The page you are looking for does not exist.</p>
-                        <a href="#home" class="btn btn-primary mt-3" aria-label="Back to Home page"><i class="fas fa-arrow-left me-2"></i> Back to Home</a>
-                    </div>
-                `);
-                document.title = 'DBA - 404';
-                showToast('Page not found!', 'error');
-            }
         });
-    }
+    });
 
-    // Listen for hash changes (e.g., when clicking #links)
-    window.addEventListener('hashchange', router);
-
-    // Initial route load
-    router();
 });
