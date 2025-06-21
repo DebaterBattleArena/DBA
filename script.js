@@ -434,11 +434,15 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         const top3 = topSortedDebaters.slice(0, 3);
         
-        // Sort debaters for 'Low' records:
+        // Filter debaters to only include those with actual losses (losses > 0)
+        // This ensures 0-0 records like Newbie One are excluded from this specific "Low Record" section
+        const lowRecordCandidatesFiltered = debaters.filter(d => d.losses > 0);
+
+        // Sort filtered candidates for 'Low' records:
         // 1. Lowest Win Rate (Ascending)
-        // 2. If Win Rates are equal: Lowest Total Matches (Ascending) - This makes 0-0 "worse" than 0-1
-        // 3. If Total Matches are also equal: More Losses (Descending) - This makes 0-2 "worse" than 0-1
-        const lowSortedDebaters = [...debaters].sort((a, b) => {
+        // 2. If Win Rates are equal: More Total Matches (Descending) - This makes 0-1 appear before 0-0
+        // 3. If Total Matches are also equal: More Losses (Descending)
+        const lowSortedDebaters = [...lowRecordCandidatesFiltered].sort((a, b) => {
             const winRateA = (a.wins + a.losses) > 0 ? a.wins / (a.wins + a.losses) : 0;
             const winRateB = (b.wins + b.losses) > 0 ? b.wins / (b.wins + b.losses) : 0;
 
@@ -446,7 +450,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const totalMatchesA = a.wins + a.losses;
             const totalMatchesB = b.wins + b.losses;
-            if (totalMatchesA !== totalMatchesB) return totalMatchesA - totalMatchesB; // Fewer matches first (e.g., 0-0 before 0-1)
+            if (totalMatchesA !== totalMatchesB) return totalMatchesB - totalMatchesA; // More matches first (e.g., 0-1 before 0-0)
 
             return b.losses - a.losses; // More losses first for ties
         });
@@ -757,7 +761,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                     <p class="mb-1">Record: <span class="badge ${debater.wins > debater.losses ? 'bg-success' : 'bg-danger'}">${debater.record}</span></p>
                                     <p class="mb-0">${statusText} vs ${opponent.name} [${latestMatch.method}]</p>
                                 </div>
-                                <img src="${opponentPhoto}" width="40" class="ms-3 rounded-circle" alt="${opponent.name}" loading="lazy">
+                                <img src="${opponentPhoto}" width="40" class="ms-3 rounded-circle" alt="${opponent.name}">
                             </div>
                         </div>
                     </div>
