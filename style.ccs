@@ -1,0 +1,326 @@
+/* General Styles */
+body {
+  font-family: 'Roboto', sans-serif;
+  background-color: #f8f9fa;
+  color: #333;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Poppins', sans-serif;
+  color: #212529;
+}
+
+/* Hero Image (for Home Page) */
+.hero-image-container {
+  position: relative;
+  width: 100%;
+  padding-top: 56.25%; /* 16:9 Aspect Ratio */
+  overflow: hidden;
+  border-bottom: 5px solid #0d6efd; /* Added separator */
+}
+
+.hero-image-container img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+/* Cards & Badges */
+.card {
+  border-radius: 10px;
+  overflow: hidden;
+  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+  cursor: pointer; /* Indicate clickable cards */
+  backface-visibility: hidden; /* Fix for flickering in some browsers with transform */
+}
+
+.card:hover {
+  transform: translateY(-5px) scale(1.02); /* More prominent hover effect */
+  box-shadow: 0 12px 25px rgba(0,0,0,0.2); /* Stronger shadow */
+}
+
+.badge {
+  font-size: 0.9em;
+  padding: 0.4em 0.8em;
+  border-radius: 0.5rem;
+  font-weight: 600;
+}
+
+/* Clickable Names & Descriptions (for Quick View Profiles) */
+.clickable-name {
+  cursor: pointer;
+  color: #0d6efd;
+  text-decoration: underline;
+  transition: color 0.2s ease-in-out;
+  font-weight: 600;
+}
+
+.clickable-name:hover {
+  color: #0a58ca;
+}
+
+.debater-desc {
+  display: none; /* Default hidden by JS */
+  color: #555;
+  margin-top: 1rem;
+  padding: 0.8rem;
+  background-color: #e9ecef;
+  border-radius: 8px;
+  opacity: 0;
+  max-height: 0;
+  overflow: hidden;
+  transition: opacity 0.4s ease-out, max-height 0.4s ease-out;
+}
+
+.debater-desc.show {
+  display: block;
+  opacity: 1;
+  max-height: 200px; /* Adjust max-height based on content */
+}
+
+.debater-desc p {
+  margin-bottom: 0.3rem;
+  font-size: 0.95em;
+}
+
+/* Table styling for Leaderboard */
+.table thead th {
+  background-color: #343a40;
+  color: #fff;
+  border-color: #454d55;
+  cursor: pointer; /* Indicates sortable */
+  position: relative;
+  user-select: none; /* Prevent text selection on click */
+}
+
+.table thead th .sort-icon {
+    margin-left: 5px;
+    opacity: 0.5;
+    transition: opacity 0.2s ease;
+}
+.table thead th:hover .sort-icon {
+    opacity: 1;
+}
+
+/* Leaderboard Filters */
+.leaderboard-filters select,
+.leaderboard-filters input {
+    margin-bottom: 10px;
+}
+
+/* Recent Matches Section Styles */
+.recent-matches-section {
+  background-color: #0d0d0d;
+  padding: 50px 0;
+  color: #fff;
+}
+
+.recent-matches-section .match-card {
+  border: 2px solid #333;
+  border-radius: 12px;
+  overflow: hidden;
+  background-color: #1a1a1a;
+  box-shadow: 0 0 20px rgba(255, 215, 0, 0.2);
+  height: 100%;
+}
+
+.recent-matches-section .match-img-16by9 {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+  display: block;
+}
+
+.recent-matches-section .card-body {
+  padding: 25px;
+}
+
+.recent-matches-section .card-title {
+  color: #FFD700;
+  font-size: 1.6rem;
+  margin-bottom: 1.5rem;
+    word-wrap: break-word; /* Ensure long titles wrap */
+}
+
+.recent-matches-section .debater-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+  color: #FFD700;
+  font-size: 1.1rem;
+}
+
+.recent-matches-section .debater-info strong {
+  flex-grow: 1;
+  text-align: left;
+}
+
+.recent-matches-section .debater-info .badge {
+  flex-shrink: 0;
+  margin-left: 10px;
+  font-size: 0.9em;
+}
+
+/* Individual Match History (Summary on Home & Profile) */
+.individual-match-history .card,
+.profile-match-history .card {
+  background-color: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.individual-match-history .card:hover,
+.profile-match-history .card:hover {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.individual-match-history .card-body,
+.profile-match-history .card-body {
+  display: flex;
+  align-items: center;
+  padding: 15px;
+}
+
+.individual-match-history img.debater-thumbnail,
+.profile-match-history img.debater-thumbnail {
+  border-radius: 50%;
+  margin-right: 15px;
+  border: 2px solid #0d6efd;
+  width: 60px;
+  height: 60px;
+  object-fit: cover;
+}
+
+.individual-match-history .card-body img.flag-icon,
+.profile-match-history .card-body img.flag-icon {
+  border-radius: 3px !important;
+  width: 20px;
+  height: auto;
+  border: none !important;
+  vertical-align: middle;
+  margin-left: 5px;
+}
+
+.individual-match-history h5,
+.profile-match-history h5 {
+  margin-bottom: 5px;
+  font-size: 1.25rem;
+  color: #212529;
+}
+
+.individual-match-history p,
+.profile-match-history p {
+  margin-bottom: 3px;
+  font-size: 0.95rem;
+  color: #6c757d;
+}
+
+.individual-match-history .badge,
+.profile-match-history .badge {
+  font-size: 0.8em;
+}
+
+/* Specific background colors for win/loss */
+.individual-match-history .card.win-card,
+.profile-match-history .card.win-card {
+  background-color: #e6ffe6; /* Lighter green for wins */
+  border-color: #d4edda;
+}
+
+.individual-match-history .card.loss-card,
+.profile-match-history .card.loss-card {
+  background-color: #ffe6e6; /* Lighter red for losses */
+  border-color: #f5c6cb;
+}
+
+/* Debater Profile Section Styles (for dynamic content) */
+.debater-profile .card {
+    text-align: center;
+    background-color: #ffffff;
+    border: 1px solid #e0e0e0;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+
+.debater-profile .card-img-top.profile-avatar {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin: 20px auto 10px auto;
+    border: 4px solid #0d6efd;
+}
+
+.debater-profile .profile-name {
+    font-size: 1.8rem;
+    font-weight: bold;
+    color: #212529;
+    margin-bottom: 5px;
+}
+
+.debater-profile .profile-record {
+    font-size: 1.1rem;
+    margin-bottom: 15px;
+}
+
+.debater-profile .profile-metric {
+    margin-bottom: 5px;
+    font-size: 1rem;
+    color: #555;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 15px;
+}
+
+.debater-profile .profile-metric strong {
+    color: #333;
+}
+
+.debater-profile .metric-value {
+    font-weight: bold;
+    color: #0d6efd;
+    width: 50px; /* Fixed width for score to align better */
+    text-align: right;
+}
+
+/* Progress Bar for Metrics */
+.debater-profile .progress {
+    height: 10px;
+    border-radius: 5px;
+    margin-left: 10px;
+    flex-grow: 1;
+    background-color: #e9ecef; /* Lighter background for empty part of bar */
+}
+
+.debater-profile .progress-bar {
+    background-color: #0d6efd;
+    transition: width 0.5s ease-in-out;
+}
+
+/* Head-to-Head Comparison Styles */
+.comparison-chart-container {
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.debater-compare-card {
+    text-align: center;
+}
+
+.debater-compare-card .profile-avatar {
+    width: 100px;
+    height: 100px;
+}
+
+.vs-icon {
+    font-size: 3rem;
+    color: #dc3545; /* Red color for VS */
+    margin: 0 15px;
+    align-self: center;
+}
