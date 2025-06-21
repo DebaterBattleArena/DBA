@@ -1,4 +1,4 @@
-<<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -7,161 +7,130 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
+  <div class="hero-image-container">
+    <img src="7745A053-1315-4B4D-AB24-9BFB05370A20.jpeg" alt="Debater Battle Arena Hero">
+  </div>
+
   <nav class="navbar navbar-dark bg-dark">
     <div class="container-fluid">
       <a class="navbar-brand" href="index.html">DBA - Debater Battle Arena</a>
-      <ul class="navbar-nav flex-row">
-        <li class="nav-item me-3">
-          <a class="nav-link active" aria-current="page" href="#home">Home</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link" href="#compare-debaters-section">Compare Debaters</a>
-        </li>
-      </ul>
     </div>
   </nav>
 
-  <div class="hero-image-container">
-    <img src="7745A053-1315-4B4D-AB24-9BFB05370A20.jpeg" alt="Foto Hiroo">
-  </div>
-
   <section class="container my-5">
-    <h2 class="mb-4">Top Record Debaters DBA</h2>
-    <div class="row text-center" id="topLowRecordsSection">
-        </div>
+    <h2 class="text-center mb-4 fw-bold text-uppercase">Top & Low Record Debaters</h2>
+    <div class="row g-4" id="topLowRecordsSection">
+      </div>
   </section>
 
+  ---
+
   <section class="container my-5">
-    <h2 class="mb-4 text-center">Top Debaters DBA (Quick View)</h2>
-    <div class="row text-center" id="quickViewProfiles">
-        </div>
+    <h2 class="mb-4 text-center fw-bold text-uppercase">Debater Profiles (Quick View)</h2>
+    <div class="row g-4 justify-content-center" id="quickViewProfiles">
+      </div>
   </section>
+
+  ---
+
+  <section class="container my-5 debater-profile">
+    <h2 class="text-center fw-bold text-uppercase mb-4">Debater Profile Metrics</h2>
+    <div class="row g-4" id="detailedProfilesSection">
+      </div>
+  </section>
+
+  ---
 
   <section class="container my-5">
     <h2 class="text-center fw-bold text-uppercase mb-4">Leaderboard Per Tier (DBA)</h2>
 
-    <div class="leaderboard-filters row mb-3">
-        <div class="col-md-6 mb-2">
-            <input type="text" class="form-control" id="leaderboardSearch" placeholder="Cari debater...">
-        </div>
-        <div class="col-md-6 mb-2">
-            <select class="form-select" id="tierFilter">
-                <option value="">Filter by Tier</option>
-                <option value="High Tier">High Tier</option>
-                <option value="Mid Tier">Mid Tier</option>
-                <option value="Low Tier">Low Tier</option>
-            </select>
-        </div>
-        <div class="col-md-6 mb-2">
-            <select class="form-select" id="countryFilter">
-                <option value="">Filter by Country</option>
-                </select>
-        </div>
-        <div class="col-md-6 mb-2">
-            <canvas id="overallStatsChart" height="100"></canvas>
-        </div>
+    <div class="mb-3">
+      <input type="text" class="form-control" id="leaderboardSearch" placeholder="Search debaters by name or country...">
     </div>
 
-    <div class="mb-4">
-      <h3 class="text-white bg-warning text-center py-2 rounded">High Tier</h3>
-      <table class="table table-bordered table-striped text-center align-middle">
-        <thead class="table-dark">
-          <tr>
-            <th data-sort="rank">Rank <i class="fas fa-sort sort-icon"></i></th>
-            <th>Foto</th>
-            <th data-sort="name">Nama <i class="fas fa-sort sort-icon"></i></th>
-            <th data-sort="country">Negara <i class="fas fa-sort sort-icon"></i></th>
-            <th data-sort="wins">Record <i class="fas fa-sort sort-icon"></i></th>
-          </tr>
-        </thead>
-        <tbody id="highTierBody">
-          </tbody>
-      </table>
+    <div class="mb-5">
+      <h3 class="text-white bg-warning text-center py-2 rounded-top">High Tier</h3>
+      <div class="table-responsive">
+        <table class="table table-bordered table-striped text-center align-middle">
+          <thead class="table-dark">
+            <tr>
+              <th>Rank</th>
+              <th>Photo</th>
+              <th>Name</th>
+              <th>Country</th>
+              <th>Record</th>
+            </tr>
+          </thead>
+          <tbody id="highTierBody">
+            </tbody>
+        </table>
+      </div>
     </div>
 
-    <div class="mb-4">
-      <h3 class="text-white bg-secondary text-center py-2 rounded">Mid Tier</h3>
-      <table class="table table-bordered table-striped text-center align-middle">
-        <thead class="table-dark">
-          <tr>
-            <th data-sort="rank">Rank <i class="fas fa-sort sort-icon"></i></th>
-            <th>Foto</th>
-            <th data-sort="name">Nama <i class="fas fa-sort sort-icon"></i></th>
-            <th data-sort="country">Negara <i class="fas fa-sort sort-icon"></i></th>
-            <th data-sort="wins">Record <i class="fas fa-sort sort-icon"></i></th>
-          </tr>
-        </thead>
-        <tbody id="midTierBody">
-          </tbody>
-      </table>
+    <div class="mb-5">
+      <h3 class="text-white bg-secondary text-center py-2 rounded-top">Mid Tier</h3>
+      <div class="table-responsive">
+        <table class="table table-bordered table-striped text-center align-middle">
+          <thead class="table-dark">
+            <tr>
+              <th>Rank</th>
+              <th>Photo</th>
+              <th>Name</th>
+              <th>Country</th>
+              <th>Record</th>
+            </tr>
+          </thead>
+          <tbody id="midTierBody">
+            </tbody>
+        </table>
+      </div>
     </div>
 
-    <div class="mb-4">
-      <h3 class="text-white bg-dark text-center py-2 rounded">Low Tier</h3>
-      <table class="table table-bordered table-striped text-center align-middle">
-        <thead class="table-dark">
-          <tr>
-            <th data-sort="rank">Rank <i class="fas fa-sort sort-icon"></i></th>
-            <th>Foto</th>
-            <th data-sort="name">Nama <i class="fas fa-sort sort-icon"></i></th>
-            <th data-sort="country">Negara <i class="fas fa-sort sort-icon"></i></th>
-            <th data-sort="wins">Record <i class="fas fa-sort sort-icon"></i></th>
-          </tr>
-        </thead>
-        <tbody id="lowTierBody">
-          </tbody>
-      </table>
+    <div class="mb-5">
+      <h3 class="text-white bg-dark text-center py-2 rounded-top">Low Tier</h3>
+      <div class="table-responsive">
+        <table class="table table-bordered table-striped text-center align-middle">
+          <thead class="table-dark">
+            <tr>
+              <th>Rank</th>
+              <th>Photo</th>
+              <th>Name</th>
+              <th>Country</th>
+              <th>Record</th>
+            </tr>
+          </thead>
+          <tbody id="lowTierBody">
+            </tbody>
+        </table>
+      </div>
     </div>
   </section>
 
-  <section class="container my-5 recent-matches-section">
-    <h2 class="mb-4 text-center">Recent Matches</h2>
+  ---
+
+  <section class="container my-5 recent-matches-section rounded shadow">
+    <h2 class="text-center mb-5 fw-bold text-uppercase">Recent Matches</h2>
     <div class="row g-4 justify-content-center" id="recentMatchesSection">
       </div>
   </section>
 
-  <section class="container my-5">
-    <h2 class="mb-4 text-center">Individual Match History</h2>
+  ---
+
+  <section class="container my-5 individual-match-history">
+    <h2 class="text-center mb-4 fw-bold text-uppercase">Individual Match History</h2>
     <div class="row g-3" id="individualMatchHistory">
       </div>
   </section>
 
-  <section class="container my-5 compare-section" id="compare-debaters-section">
-    <h2 class="text-center fw-bold text-uppercase mb-4">Compare Debaters</h2>
-    <div class="row justify-content-center mb-4">
-      <div class="col-md-5">
-          <select class="form-select mb-2" id="debaterSelect1" aria-label="Select first debater">
-              <option value="">Select Debater 1</option>
-              </select>
-      </div>
-      <div class="col-md-1 d-flex align-items-center justify-content-center">
-          <span class="vs-text">VS</span>
-      </div>
-      <div class="col-md-5">
-          <select class="form-select mb-2" id="debaterSelect2" aria-label="Select second debater">
-              <option value="">Select Debater 2</option>
-              </select>
-      </div>
-    </div>
-    <div class="row" id="comparisonResults">
-        <div class="col-12 text-center text-muted">
-            <p>Select two debaters above to compare their profiles.</p>
-        </div>
-    </div>
-  </section>
-
-  <footer class="bg-dark text-white text-center py-3">
+  <footer class="bg-dark text-white text-center py-4 mt-5">
     <p class="mb-0">© 2025 Debater Battle Arena. All Rights Reserved.</p>
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script src="script.js"></script>
-
 </body>
 </html>
