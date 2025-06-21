@@ -1,8 +1,8 @@
 document.addEventListener('DOMContentLoaded', async () => {
-    let allDebatersData = [];
-    let allMatchesData = [];
+    let allDebatersData = []; // Global variable to store debater data
+    let allMatchesData = [];   // Global variable to store match data
     let currentLeaderboardSort = { column: 'wins', order: 'desc' }; // Default sort for leaderboard
-    let overallStatsChartInstance = null; // Chart.js instance for overall stats
+    let overallStatsChartInstance = null; // Chart.js instance for overall stats chart
     let comparisonRadarChartInstance = null; // Chart.js instance for comparison radar chart
 
     // --- Utility Functions ---
@@ -10,8 +10,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     function showToast(message, type = 'info') {
         const toastEl = document.getElementById('liveToast');
         const toastBody = document.getElementById('toastBody');
-        if (!toastEl || !toastBody) return;
-
+        if (!toastEl || !toastBody) {
+            console.warn("Toast elements not found. Message:", message);
+            return;
+        }
         toastBody.textContent = message;
         toastEl.className = 'toast hide'; // Reset classes
         toastEl.classList.add('text-bg-' + type);
@@ -20,14 +22,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function getSafeImagePath(path) {
+        // Simple check if path is defined and not empty, otherwise return default
+        // This is crucial for preventing broken image icons and potential layout issues
         return path && path !== '' ? path : 'default_avatar.png';
     }
 
-    // --- Data Loading ---
+    // --- Fetch Data Function ---
     async function fetchData() {
         try {
             console.log("Attempting to fetch data.json...");
-            const response = await fetch('data.json');
+            const response = await fetch('data.json'); // This requires a local server
             if (!response.ok) {
                 const errorDetail = response.statusText || `HTTP status ${response.status}`;
                 throw new Error(`Failed to load data.json: ${errorDetail}.`);
@@ -40,8 +44,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             return data;
         } catch (error) {
             console.error("Critical error loading data:", error);
-            showToast('Failed to load application data! Check console for details.', 'error');
-            // Provide visual feedback for data loading failure
+            showToast('Failed to load application data! Please check data.json and local server setup.', 'error');
+            // This error display will remain on the page if data loading fails
             document.body.innerHTML = `
                 <div class="container my-5 text-center text-danger animate__animated animate__fadeIn" role="alert">
                     <i class="fas fa-exclamation-triangle fa-3x mb-3"></i>
@@ -57,47 +61,60 @@ document.addEventListener('DOMContentLoaded', async () => {
     // --- Section Rendering Functions ---
 
     function renderTopLowRecords(debaters) {
-        const topLowSection = document.getElementById('topLowRecordsSection');
-        if (!topLowSection) return;
+        console.log("Rendering Top & Low Records section...");
+        const topLowRecordsSection = document.getElementById('topLowRecordsSection');
+        if (!topLowRecordsSection) return;
 
-        const sorted = [...debaters].sort((a,b) => b.wins - a.wins || (b.wins+b.losses) - (a.wins+a.losses));
-        const top3 = sorted.slice(0,3);
-        const low3 = sorted.slice(-3).reverse().filter(d => !top3.some(t => t.id === d.id)); // Ensure distinct
+        const sortedDebaters = [...debaters].sort((a, b) => {
+            const winRateA = (a.wins + a.losses) > 0 ? a.wins / (a.wins + a.losses) : 0;
+            const winRateB = (b.wins + b.losses) > 0 ? b.wins / (b.wins + b.losses) : 0;
+            if (winRateA !== winRateB) return winRateB - winRateA;
+            return (b.wins + b.losses) - (a.wins + a.losses);
+        });
+
+        const top3 = sortedDebaters.slice(0, 3);
+        const low3StartIndex = Math.max(0, sortedDebaters.length - 3);
+        const low3 = sortedDebaters.slice(low3StartIndex).filter(d => !top3.some(t => t.id === d.id)).reverse();
 
         let html = `
             <div class="col-md-6">
                 <h3 class="mb-3 text-success">Top Record Debaters DBA <i class="fas fa-crown ms-2"></i></h3>
                 <div class="row g-3">
         `;
-        top3.forEach(d => html += `
-            <div class="col-md-4">
-                <div class="card shadow h-100">
-                    <div class="card-body">
-                        <h4>${d.name} <img src="${getSafeImagePath(d.flag)}" width="24" class="ms-2" alt="${d.country_code}"/></h4>
-                        <p>Record: <span class="badge bg-success">${d.record}</span></p>
+        top3.forEach(debater => {
+            html += `
+                <div class="col-md-4">
+                    <div class="card shadow h-100">
+                        <div class="card-body">
+                            <h4>${debater.name} <img src="${getSafeImagePath(debater.flag)}" width="24" class="ms-2" alt="${debater.country_code}"/></h4>
+                            <p>Record: <span class="badge bg-success">${debater.record}</span></p>
+                        </div>
                     </div>
                 </div>
-            </div>
-        `);
+            `;
+        });
         html += `</div></div><div class="col-md-6">
                 <h3 class="mb-3 text-danger">Low Record Debaters DBA <i class="fas fa-arrow-down ms-2"></i></h3>
                 <div class="row g-3">
         `;
-        low3.forEach(d => html += `
-            <div class="col-md-4">
-                <div class="card shadow h-100">
-                    <div class="card-body">
-                        <h4>${d.name} <img src="${getSafeImagePath(d.flag)}" width="24" class="ms-2" alt="${d.country_code}"/></h4>
-                        <p>Record: <span class="badge bg-danger">${d.record}</span></p>
+        low3.forEach(debater => {
+            html += `
+                <div class="col-md-4">
+                    <div class="card shadow h-100">
+                        <div class="card-body">
+                            <h4>${debater.name} <img src="${getSafeImagePath(debater.flag)}" width="24" class="ms-2" alt="${debater.country_code}"/></h4>
+                            <p>Record: <span class="badge bg-danger">${debater.record}</span></p>
+                        </div>
                     </div>
                 </div>
-            </div>
-        `);
+            `;
+        });
         html += `</div></div>`;
-        topLowSection.innerHTML = html;
+        topLowRecordsSection.innerHTML = html;
     }
 
     function renderQuickViewProfiles(debaters) {
+        console.log("Rendering Quick View Profiles section...");
         const quickViewSection = document.getElementById('quickViewProfiles');
         if (!quickViewSection) return;
 
@@ -134,6 +151,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function renderLeaderboard(debaters, query = '', tierFilter = '', countryFilter = '', sortColumn = 'wins', sortOrder = 'desc') {
+        console.log("Rendering Leaderboard with query:", query, "tier:", tierFilter, "country:", countryFilter, "sort:", sortColumn, sortOrder);
         const highTierBody = document.getElementById('highTierBody');
         const midTierBody = document.getElementById('midTierBody');
         const lowTierBody = document.getElementById('lowTierBody');
@@ -155,7 +173,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 
         let filteredDebaters = debaters.filter(d =>
-            (query === '' || d.name.toLowerCase().includes(query.toLowerCase()) || d.country.toLowerCase().includes(query.toLowerCase())) &&
+            (query === '' || d.name.toLowerCase().includes(query.toLowerCase()) || d.country.toLowerCase().includes(query.toLowerCase()) || d.country_code.toLowerCase().includes(query.toLowerCase())) &&
             (tierFilter === '' || d.tier === tierFilter) &&
             (countryFilter === '' || d.country === countryFilter)
         );
@@ -167,7 +185,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return sortOrder === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
             } else if (sortColumn === 'wins') {
                 valA = a.wins; valB = b.wins;
-            } else { // Default to rank (wins)
+            } else { // Default to wins for 'rank' and other unknown
                 valA = a.wins; valB = b.wins;
             }
             return sortOrder === 'asc' ? valA - valB : valB - valA;
@@ -190,8 +208,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     </tr>
                 `;
             });
-            // Add empty rows if less than 5
-            for (let i = list.length; i < 5; i++) {
+            for (let i = list.length; i < 5; i++) { // Fill with empty rows up to 5
                 tbody.innerHTML += `<tr><td>${i + 1}</td><td></td><td></td><td></td><td></td></tr>`;
             }
         }
@@ -214,12 +231,51 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
+    function renderOverallStatsChart(debaters) {
+        const ctx = document.getElementById('overallStatsChart');
+        if (!ctx) return;
+
+        if (overallStatsChartInstance) { // Destroy previous chart instance
+            overallStatsChartInstance.destroy();
+        }
+
+        const tierCounts = debaters.reduce((acc, d) => {
+            acc[d.tier] = (acc[d.tier] || 0) + 1;
+            return acc;
+        }, {});
+
+        overallStatsChartInstance = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: Object.keys(tierCounts),
+                datasets: [
+                    {
+                        label: 'Debaters per Tier',
+                        data: Object.values(tierCounts),
+                        backgroundColor: ['#ffc107', '#6c757d', '#343a40'],
+                        borderColor: ['#e0a800', '#5a6268', '#23272b'],
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: { display: true, text: 'Debaters Distribution by Tier', font: { size: 16 } },
+                    legend: { display: false }
+                },
+                scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+            }
+        });
+    }
+
     function renderRecentMatches(matches) {
         const recentMatchesSection = document.getElementById('recentMatchesSection');
         if (!recentMatchesSection) return;
 
         let html = '';
-        const sortedMatches = [...matches].sort((a,b) => (new Date(b.date || 0)) - (new Date(a.date || 0))); // Sort by date
+        const sortedMatches = [...matches].sort((a,b) => (new Date(b.date || 0)) - (new Date(a.date || 0)));
         
         sortedMatches.slice(0, 3).forEach(match => {
             html += `
@@ -228,8 +284,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <img src="${getSafeImagePath(match.image)}" class="match-img-16by9 card-img-top" alt="${match.debater1.name} vs ${match.debater2.name}">
                         <div class="card-body text-center">
                             <h5 class="card-title fw-bold">Indonesia 🇮🇩 vs Malaysia 🇲🇾</h5>
-                            <p class="mb-1"><strong>${match.debater1.name} (${match.debater1.character})</strong> <span class="badge ${match.winner === match.debater1.name ? 'bg-success' : 'bg-danger'}">WIN</span></p> 
-                            <p class="mb-0"><strong>${match.debater2.name} (${match.debater2.character})</strong> <span class="badge ${match.winner === match.debater2.name ? 'bg-danger' : 'bg-success'}">LOSS</span></p>
+                            <div class="debater-info">
+                                <strong>${match.debater1.name} (${match.debater1.character})</strong> <span class="badge ${match.winner === match.debater1.name ? 'bg-success' : 'bg-danger'}">WIN</span>
+                            </div>
+                            <div class="debater-info">
+                                <strong>${match.debater2.name} (${match.debater2.character})</strong> <span class="badge ${match.winner === match.debater2.name ? 'bg-danger' : 'bg-success'}">LOSS</span></p>
+                            </div>
+                            <small class="text-muted mt-2 d-block">Method: ${match.method} ${match.event ? `(Event: ${match.event})` : ''}</small>
                         </div>
                     </div>
                 </div>
@@ -239,8 +300,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function renderIndividualMatchHistory(debaters, matches) {
-        const individualMatchHistorySection = document.getElementById('individualMatchHistory');
-        if (!individualMatchHistorySection) return;
+        const individualHistorySection = document.getElementById('individualMatchHistory');
+        if (!individualHistorySection) return;
 
         let html = '';
         const relevantDebaters = debaters.filter(d => matches.some(m => m.debater1.id === d.id || m.debater2.id === d.id)).slice(0,3);
@@ -252,6 +313,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             const isWinner = latestMatch.winner === debater.name;
             const opponent = latestMatch.debater1.id === debater.id ? latestMatch.debater2 : latestMatch.debater1;
             const cardClass = isWinner ? 'bg-success' : 'bg-danger';
+            
+            const opponentDebater = debaters.find(d => d.id === opponent.id);
+            const opponentPhoto = getSafeImagePath(opponentDebater ? opponentDebater.photo : '');
 
             html += `
                 <div class="col-md-4">
@@ -263,21 +327,23 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 <p class="mb-1">Record: <span class="badge ${cardClass}">${debater.record}</span></p>
                                 <p class="mb-0">${isWinner ? 'Win' : 'Loss'} vs ${opponent.name} [${latestMatch.method}]</p>
                             </div>
+                            <img src="${opponentPhoto}" width="40" class="ms-3 rounded-circle" alt="${opponent.name}">
                         </div>
                     </div>
                 </div>
             `;
         });
-        individualMatchHistorySection.innerHTML = html;
+        individualHistorySection.innerHTML = html;
     }
 
+    // --- Compare Debaters Section Functions ---
     function renderCompareDebatersSection(debaters) {
-        const compareSection = document.getElementById('compare-section-id');
+        const compareSection = document.getElementById('compare-debaters-section');
         if (!compareSection) return;
 
         let debaterOptionsHtml = debaters.map(d => `<option value="${d.id}">${d.name}</option>`).join('');
 
-        // Re-construct the entire section dynamically to ensure fresh event listeners
+        // Re-render the section content to attach new event listeners reliably
         compareSection.innerHTML = `
             <h2 class="text-center fw-bold text-uppercase mb-4">Compare Debaters</h2>
             <div class="row justify-content-center mb-4">
@@ -306,16 +372,19 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const debaterSelect1 = document.getElementById('debaterSelect1');
         const debaterSelect2 = document.getElementById('debaterSelect2');
+        const comparisonResultsDiv = document.getElementById('comparisonResults');
 
-        const updateComparison = () => {
+        const updateComparisonDisplay = () => {
             const id1 = debaterSelect1.value;
             const id2 = debaterSelect2.value;
 
             const debater1 = debaters.find(d => d.id === id1);
             const debater2 = debaters.find(d => d.id === id2);
 
-            const comparisonResultsDiv = document.getElementById('comparisonResults');
-            if (!comparisonResultsDiv) return;
+            if (comparisonRadarChartInstance) { // Destroy previous chart if exists
+                comparisonRadarChartInstance.destroy();
+                comparisonRadarChartInstance = null;
+            }
 
             if (!debater1 || !debater2) {
                 comparisonResultsDiv.innerHTML = `<div class="col-12 text-center text-muted"><p>Select two debaters above to compare their profiles.</p></div>`;
@@ -327,10 +396,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return;
             }
 
-            // Generate comparison table dynamically
+            // Generate comparison table and radar chart
+            const labels = Object.keys(debater1.metrics);
+            const data1 = Object.values(debater1.metrics).map(score => parseFloat(score));
+            const data2 = Object.values(debater2.metrics).map(score => parseFloat(score));
+
             let comparisonTableHtml = `
                 <div class="col-12 mt-4">
-                    <table class="table table-bordered table-striped metric-table">
+                    <h4 class="text-center mb-3">Metrics Comparison <i class="fas fa-chart-line ms-2"></i></h4>
+                    <canvas id="comparisonRadarChartCanvas" height="300"></canvas>
+                    <table class="table table-bordered table-striped metric-table mt-4">
                         <thead>
                             <tr>
                                 <th>Metric</th>
@@ -340,7 +415,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         </thead>
                         <tbody>
             `;
-            for (const metricName of Object.keys(debater1.metrics)) {
+            for (const metricName of labels) { // Use labels to ensure order and consistency
                 const score1 = debater1.metrics[metricName];
                 const score2 = debater2.metrics[metricName];
                 const badgeClass1 = parseFloat(score1) >= 7 ? 'bg-primary' : (parseFloat(score1) >= 4 ? 'bg-warning' : 'bg-secondary');
@@ -356,33 +431,72 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
             comparisonTableHtml += `</tbody></table></div>`;
             comparisonResultsDiv.innerHTML = comparisonTableHtml;
+
+            // Render Radar Chart after HTML is in DOM
+            const ctxRadar = document.getElementById('comparisonRadarChartCanvas');
+            if (ctxRadar) {
+                comparisonRadarChartInstance = new Chart(ctxRadar, {
+                    type: 'radar',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            {
+                                label: debater1.name,
+                                data: data1,
+                                backgroundColor: 'rgba(13, 110, 253, 0.2)',
+                                borderColor: 'rgba(13, 110, 253, 1)',
+                                borderWidth: 1,
+                                pointBackgroundColor: 'rgba(13, 110, 253, 1)',
+                                pointBorderColor: '#fff',
+                                pointHoverBackgroundColor: '#fff',
+                                pointHoverBorderColor: 'rgba(13, 110, 253, 1)'
+                            },
+                            {
+                                label: debater2.name,
+                                data: data2,
+                                backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                                borderColor: 'rgba(255, 99, 132, 1)',
+                                borderWidth: 1,
+                                pointBackgroundColor: 'rgba(255, 99, 132, 1)',
+                                pointBorderColor: '#fff',
+                                pointHoverBackgroundColor: '#fff',
+                                pointHoverBorderColor: 'rgba(255, 99, 132, 1)'
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: { r: { suggestedMin: 0, suggestedMax: 10, ticks: { stepSize: 2 } } },
+                        plugins: { legend: { position: 'top' }, tooltip: { callbacks: { label: function(context) { return context.dataset.label + ': ' + context.raw + '/10'; } } } }
+                    }
+                });
+            }
         };
 
-        debaterSelect1.addEventListener('change', updateComparison);
-        debaterSelect2.addEventListener('change', updateComparison);
+        debaterSelect1.addEventListener('change', updateComparisonDisplay);
+        debater2.addEventListener('change', updateComparisonDisplay); // Corrected variable name
+
+        // Initial call if debaters are pre-selected (e.g., from URL params, though not implemented here)
+        updateComparisonDisplay();
     }
 
-    // --- Initial Load & Event Attachments ---
-
+    // --- Main Initialization ---
     async function initializePage() {
         console.log("Initializing page...");
         const data = await fetchData(); // Fetch data once
         if (!data) return; // If data fetch failed, stop.
 
-        // Render all static-like sections immediately
+        // Render all sections
         renderTopLowRecords(data.debaters);
         renderQuickViewProfiles(data.debaters);
+        renderLeaderboard(data.debaters, '', '', '', currentLeaderboardSort.column, currentLeaderboardSort.order);
+        renderOverallStatsChart(data.debaters);
         renderRecentMatches(data.matches);
         renderIndividualMatchHistory(data.debaters, data.matches);
         renderCompareDebatersSection(data.debaters); // Render comparison section
 
-        // Render Leaderboard (which includes its own filtering/sorting)
-        renderLeaderboard(data.debaters);
-
-        // Render overall stats chart
-        renderOverallStatsChart(data.debaters);
-
-        // Attach all event listeners after everything is rendered
+        // Attach event listeners for dynamic parts
         attachAllEventListeners(data.debaters, data.matches);
 
         console.log("Page initialization complete.");
@@ -426,6 +540,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                 renderDetailedProfiles(debaters, event.target.value);
             });
         }
+        
+        // Quick View Profile toggle description (re-attach because HTML is re-rendered)
+        document.querySelectorAll('#quickViewProfiles .clickable-name').forEach(element => {
+            element.addEventListener('click', () => {
+                const descElement = document.getElementById(`${element.dataset.debaterId}-desc`);
+                if (descElement) {
+                    descElement.style.display = (descElement.style.display === "block") ? "none" : "block";
+                }
+            });
+        });
     }
 
     // Call initializePage when the DOM is fully loaded
