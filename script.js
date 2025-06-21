@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
     let allDebatersData = [];
-    let allMatchesData = []; // Tetap ada karena mungkin digunakan di tempat lain atau untuk perbandingan
+    let allMatchesData = [];
     let currentLeaderboardSort = { column: 'rank', order: 'asc' }; // Default sort for leaderboard
     let comparisonChartInstance = null; // To store Chart.js instance for destruction
     let overallStatsChartInstance = null; // To store Chart.js instance for overall stats chart
@@ -219,17 +219,34 @@ document.addEventListener('DOMContentLoaded', () => {
               </div>
             </section>
 
-            `;
+            <hr class="my-5">
+
+            <section class="container my-5 recent-matches-section rounded shadow">
+              <h2 class="text-center mb-5 fw-bold text-uppercase animate__animated animate__fadeInDown">Recent Matches <i class="fas fa-fire ms-2"></i></h2>
+              <div class="row g-4 justify-content-center" id="recentMatchesSection">
+              </div>
+            </section>
+
+            <hr class="my-5">
+
+            <section class="container my-5 individual-match-history">
+              <h2 class="text-center mb-4 fw-bold text-uppercase animate__animated animate__fadeInDown">Individual Match History (Latest) <i class="fas fa-history ms-2"></i></h2>
+              <div class="row g-3" id="individualMatchHistory">
+              </div>
+            </section>
+        `;
         setAppContent(homePageHtml);
 
         renderTopLowRecords(debaters);
         renderQuickViewProfiles(debaters);
-        renderDetailedProfiles(debaters); // Call without searchTerm to show all
+        renderDetailedProfiles(debaters); // Call to render all detailed profiles
         renderLeaderboard(debaters); // Initial call
         renderOverallStatsChart(debaters); // Render chart
+        renderRecentMatches(matches); // Re-added
+        renderIndividualMatchHistory(debaters, matches); // Re-added
 
-        // Attach event listeners specific to the remaining sections
-        attachHomePageEventListeners(debaters, matches); // Matches is still passed but not used for recent matches
+        // Re-attach event listeners as DOM elements are newly created
+        attachHomePageEventListeners(debaters, matches);
     }
 
     /**
@@ -588,6 +605,7 @@ document.addEventListener('DOMContentLoaded', () => {
             card.addEventListener('click', () => {
                 const debaterId = card.dataset.debaterId;
                 if (debaterId) {
+                    // Navigate to profile page for full details
                     window.location.hash = `#profile/${debaterId}`;
                 }
             });
@@ -627,8 +645,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <p><strong>Character:</strong> ${debaterCharacter}</p>
                                 <p><strong>Summary:</strong> ${debaterSummary}</p>
                             </div>
-                            <a href="#profile/${debater.id}" class="btn btn-sm btn-outline-primary mt-2">View Profile</a>
-                        </div>
+                            </div>
                     </div>
                 </div>
             `;
@@ -670,11 +687,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!detailedProfilesSection) return;
 
         // No filtering needed as search is removed, display all debaters
-        const filteredDebaters = debaters;
+        const debatersToDisplay = debaters;
 
         let html = '';
-        if (filteredDebaters.length > 0) {
-            filteredDebaters.forEach(debater => {
+        if (debatersToDisplay.length > 0) {
+            debatersToDisplay.forEach(debater => {
                 let metricsHtml = '';
                 // Ensure debater.metrics exists and is an object
                 if (debater.metrics && typeof debater.metrics === 'object') {
@@ -712,8 +729,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <div class="mt-3 text-start">
                                     ${metricsHtml}
                                 </div>
-                                <a href="#profile/${debater.id}" class="btn btn-primary btn-sm mt-3">View Full Profile <i class="fas fa-arrow-right ms-1"></i></a>
-                            </div>
+                                </div>
                         </div>
                     </div>
                 `;
@@ -969,8 +985,177 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // `renderRecentMatches` function has been removed.
-    // `renderIndividualMatchHistory` function has been removed.
+    /**
+     * Renders the recent matches section.
+     * @param {Array<Object>} matches - Array of match data.
+     */
+    function renderRecentMatches(matches) {
+        const recentMatchesSection = document.getElementById('recentMatchesSection');
+        if (!recentMatchesSection) return;
+
+        // Sort matches by date (newest first) and take the latest 10
+        const sortedMatches = [...matches].sort((a, b) => {
+            const dateA = a.date ? new Date(a.date) : new Date(0);
+            const dateB = b.date ? new Date(b.date) : new Date(0);
+            return dateB.getTime() - dateA.getTime();
+        }).slice(0, 10); // Show 10 latest matches
+
+        let html = '';
+        if (sortedMatches.length > 0) {
+            sortedMatches.forEach(match => {
+                const debater1Id = match.debater1?.id;
+                const debater2Id = match.debater2?.id;
+
+                const debater1FullData = debater1Id ? allDebatersData.find(d => d.id === debater1Id) : null;
+                const debater2FullData = debater2Id ? allDebatersData.find(d => d.id === debater2Id) : null;
+
+                const debater1DataForDisplay = debater1FullData || match.debater1 || {};
+                const debater2DataForDisplay = debater2FullData || match.debater2 || {};
+
+                const debater1Photo = debater1DataForDisplay.photo || 'assets/default_avatar.png';
+                const debater2Photo = debater2DataForDisplay.photo || 'assets/default_avatar.png';
+                const debater1Name = debater1DataForDisplay.name || 'Unknown Debater 1';
+                const debater2Name = debater2DataForDisplay.name || 'Unknown Debater 2';
+                const debater1Character = match.debater1?.character || debater1FullData?.character || 'Unknown';
+                const debater2Character = match.debater2?.character || debater2FullData?.character || 'Unknown';
+
+                const winnerName = match.winner || 'N/A';
+                let winnerBadgeClass = 'bg-secondary';
+                if (winnerName !== 'N/A') {
+                    if (winnerName === debater1Name) {
+                        winnerBadgeClass = 'bg-success'; // Debater 1 wins
+                    } else if (winnerName === debater2Name) {
+                        winnerBadgeClass = 'bg-danger'; // Debater 2 wins
+                    }
+                }
+
+                const matchDate = match.date ? new Date(match.date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : 'N/A';
+                const matchMethod = match.method || 'N/A';
+                const matchEvent = match.event || '';
+
+                html += `
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card shadow match-card h-100 animate__animated animate__fadeInUp">
+                            <div class="card-header text-center bg-primary text-white">
+                                <h5 class="mb-0">Match ID: ${match.id || 'N/A'}</h5>
+                            </div>
+                            <div class="card-body text-center">
+                                <div class="d-flex justify-content-around align-items-center mb-3">
+                                    <div class="debater-info">
+                                        <a href="#profile/${debater1Id || ''}" class="text-decoration-none text-dark">
+                                            <img src="${debater1Photo}" class="rounded-circle match-avatar" alt="${debater1Name}" onerror="onImageError(this)">
+                                            <p class="mb-0 fw-bold">${debater1Name}</p>
+                                        </a>
+                                        <small class="text-muted">${debater1Character}</small>
+                                    </div>
+                                    <span class="vs-text fw-bold mx-2">VS</span>
+                                    <div class="debater-info">
+                                        <a href="#profile/${debater2Id || ''}" class="text-decoration-none text-dark">
+                                            <img src="${debater2Photo}" class="rounded-circle match-avatar" alt="${debater2Name}" onerror="onImageError(this)">
+                                            <p class="mb-0 fw-bold">${debater2Name}</p>
+                                        </a>
+                                        <small class="text-muted">${debater2Character}</small>
+                                    </div>
+                                </div>
+                                <p class="card-text mb-1">
+                                    <i class="fas fa-trophy me-1"></i> Winner: <span class="badge ${winnerBadgeClass}">${winnerName}</span>
+                                </p>
+                                <p class="card-text mb-1"><i class="fas fa-gavel me-1"></i> Method: ${matchMethod}</p>
+                                <p class="card-text"><i class="fas fa-calendar-alt me-1"></i> Date: ${matchDate}</p>
+                                ${matchEvent ? `<p class="card-text"><i class="fas fa-calendar-check me-1"></i> Event: ${matchEvent}</p>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+        } else {
+            html = `
+                <div class="col-12 text-center text-muted animate__animated animate__fadeIn">
+                    <p><i class="fas fa-info-circle me-2"></i> No recent matches available.</p>
+                </div>
+            `;
+        }
+        recentMatchesSection.innerHTML = html;
+    }
+
+    /**
+     * Renders a simplified individual match history section on the homepage.
+     * @param {Array<Object>} debaters - Array of debater data.
+     * @param {Array<Object>} matches - Array of match data.
+     */
+    function renderIndividualMatchHistory(debaters, matches) {
+        const individualMatchHistorySection = document.getElementById('individualMatchHistory');
+        if (!individualMatchHistorySection) return;
+
+        let html = '';
+        // Display 5 random debaters and their 3 latest matches
+        const validDebaters = debaters.filter(d => d.id);
+        const debatersToShow = validDebaters.sort(() => 0.5 - Math.random()).slice(0, 5); // Pick 5 random debaters
+
+        if (debatersToShow.length === 0) {
+            individualMatchHistorySection.innerHTML = `<div class="col-12 text-center text-muted"><p>No debaters to display match history for.</p></div>`;
+            return;
+        }
+
+        debatersToShow.forEach(debater => {
+            if (!debater.id) return; // Skip if debater somehow has no ID
+
+            const debaterMatches = matches.filter(match =>
+                match.debater1?.id === debater.id || match.debater2?.id === debater.id
+            ).sort((a, b) => {
+                const dateA = a.date ? new Date(a.date) : new Date(0);
+                const dateB = b.date ? new Date(b.date) : new Date(0);
+                return dateB.getTime() - dateA.getTime();
+            }).slice(0, 3); // Show only the 3 latest matches per debater
+
+            if (debaterMatches.length > 0) {
+                const debaterPhoto = debater.photo || 'assets/default_avatar.png';
+                const debaterName = debater.name || 'Unknown Debater';
+
+                html += `
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card shadow h-100 animate__animated animate__fadeInUp">
+                            <div class="card-header bg-dark text-white d-flex align-items-center">
+                                <img src="${debaterPhoto}" width="40" height="40" class="rounded-circle me-2 object-fit-cover" alt="${debaterName}" onerror="onImageError(this)">
+                                <h5 class="mb-0 flex-grow-1">${debaterName}'s Latest Matches</h5>
+                                <a href="#profile/${debater.id}" class="btn btn-sm btn-outline-light ms-auto">View All</a>
+                            </div>
+                            <ul class="list-group list-group-flush">
+                `;
+                debaterMatches.forEach(match => {
+                    const opponentMatchData = match.debater1?.id === debater.id ? match.debater2 : match.debater1;
+                    const opponentId = opponentMatchData?.id;
+                    const opponentFullData = opponentId ? allDebatersData.find(d => d.id === opponentId) : null;
+
+                    const isWinner = match.winner === debater.name;
+                    const statusBadgeClass = isWinner ? 'bg-success' : 'bg-danger';
+                    const statusText = isWinner ? 'WIN' : 'LOSS';
+                    const matchDate = match.date ? new Date(match.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'N/A';
+                    const matchMethod = match.method || 'N/A';
+
+                    const opponentName = (opponentFullData?.name || opponentMatchData?.name) || 'Unknown Opponent';
+                    const opponentPhoto = (opponentFullData?.photo || opponentMatchData?.photo) || 'assets/default_avatar.png';
+
+                    html += `
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <span class="badge ${statusBadgeClass}">${statusText}</span> vs <a href="#profile/${opponentId || ''}" class="text-decoration-none">${opponentName}</a>
+                                <br><small class="text-muted">${matchMethod} - ${matchDate}</small>
+                            </div>
+                            <img src="${opponentPhoto}" width="30" height="30" class="rounded-circle object-fit-cover" alt="${opponentName}" onerror="onImageError(this)">
+                        </li>
+                    `;
+                });
+                html += `
+                            </ul>
+                        </div>
+                    </div>
+                `;
+            }
+        });
+        individualMatchHistorySection.innerHTML = html;
+    }
+
 
     // --- Event Listeners and Routing ---
 
@@ -1242,8 +1427,6 @@ document.addEventListener('DOMContentLoaded', () => {
             link.classList.remove('active');
             const linkHref = link.getAttribute('href');
             if (linkHref === hash || (hash.startsWith('#profile/') && linkHref === '#home')) {
-                // If on a profile page, highlight home as it's the main entry.
-                // Or if you have a dedicated 'Profile' link in nav, highlight that.
                 link.classList.add('active');
             }
         });
@@ -1265,11 +1448,9 @@ document.addEventListener('DOMContentLoaded', () => {
         handleLocationHash();
         window.addEventListener('hashchange', handleLocationHash);
 
-        // Add event listener for navigation links (already present in previous version, ensure it works)
+        // Add event listener for navigation links
         document.querySelectorAll('.navbar-nav .nav-link').forEach(link => {
             link.addEventListener('click', (event) => {
-                // The hashchange listener will be triggered by changing window.location.hash
-                // This prevents double handling and ensures consistency.
                 const targetHash = event.target.getAttribute('href');
                 if (targetHash) {
                     window.location.hash = targetHash;
