@@ -1,4 +1,4 @@
-/* General Styles */
+/* Custom CSS for the site */
 body {
   font-family: 'Roboto', sans-serif;
   background-color: #f8f9fa;
@@ -10,14 +10,12 @@ h1, h2, h3, h4, h5, h6 {
   color: #212529;
 }
 
-/* Hero Image (for Home Page) */
 .hero-image-container {
   position: relative;
   width: 100%;
-  /* Removed padding-top: 56.25%; here to prevent stretching */
+  height: 400px; /* Fixed height for hero image container */
   overflow: hidden;
   border-bottom: 5px solid #0d6efd;
-  height: 400px; /* **Fixed height for hero image container** */
 }
 
 .hero-image-container img {
@@ -25,23 +23,20 @@ h1, h2, h3, h4, h5, h6 {
   top: 0;
   left: 0;
   width: 100%;
-  height: 100%; /* **Make image fill container** */
+  height: 100%;
   object-fit: cover;
   object-position: center;
 }
 
-/* Cards & Badges */
 .card {
   border-radius: 10px;
   overflow: hidden;
   transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
-  cursor: pointer; /* Indicate clickable cards */
-  backface-visibility: hidden; /* Fix for flickering in some browsers with transform */
 }
 
 .card:hover {
-  transform: translateY(-5px) scale(1.02); /* More prominent hover effect */
-  box-shadow: 0 12px 25px rgba(0,0,0,0.2); /* Stronger shadow */
+  transform: translateY(-5px);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.15);
 }
 
 .badge {
@@ -51,12 +46,11 @@ h1, h2, h3, h4, h5, h6 {
   font-weight: 600;
 }
 
-/* Clickable Names & Descriptions (for Quick View Profiles) */
 .clickable-name {
   cursor: pointer;
   color: #0d6efd;
   text-decoration: underline;
-  transition: color 0.2s ease-in-out;
+  transition: color 0.2s;
   font-weight: 600;
 }
 
@@ -65,27 +59,12 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .debater-desc {
-  display: none; /* Default hidden by JS */
+  display: none;
   color: #555;
   margin-top: 1rem;
   padding: 0.8rem;
   background-color: #e9ecef;
   border-radius: 8px;
-  opacity: 0;
-  max-height: 0;
-  overflow: hidden;
-  transition: opacity 0.4s ease-out, max-height 0.4s ease-out;
-}
-
-.debater-desc.show {
-  display: block;
-  opacity: 1;
-  max-height: 200px; /* Adjust max-height based on content */
-}
-
-.debater-desc p {
-  margin-bottom: 0.3rem;
-  font-size: 0.95em;
 }
 
 /* Table styling for Leaderboard */
@@ -93,7 +72,7 @@ h1, h2, h3, h4, h5, h6 {
   background-color: #343a40;
   color: #fff;
   border-color: #454d55;
-  cursor: pointer; /* Indicates sortable */
+  cursor: pointer; /* Indicate sortable */
   position: relative;
   user-select: none; /* Prevent text selection on click */
 }
@@ -131,7 +110,7 @@ h1, h2, h3, h4, h5, h6 {
 
 .recent-matches-section .match-img-16by9 {
   width: 100%;
-  height: 200px;
+  height: 200px; /* Adjusted height */
   object-fit: cover;
   display: block;
 }
@@ -144,7 +123,6 @@ h1, h2, h3, h4, h5, h6 {
   color: #FFD700;
   font-size: 1.6rem;
   margin-bottom: 1.5rem;
-    word-wrap: break-word; /* Ensure long titles wrap */
 }
 
 .recent-matches-section .debater-info {
@@ -167,39 +145,34 @@ h1, h2, h3, h4, h5, h6 {
   font-size: 0.9em;
 }
 
-/* Individual Match History (Summary on Home & Profile) */
-.individual-match-history .card,
-.profile-match-history .card {
+/* Individual Match History */
+.individual-match-history .card {
   background-color: #fff;
   border: 1px solid #ddd;
   border-radius: 8px;
   transition: all 0.3s ease;
 }
 
-.individual-match-history .card:hover,
-.profile-match-history .card:hover {
+.individual-match-history .card:hover {
   box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
 
-.individual-match-history .card-body,
-.profile-match-history .card-body {
+.individual-match-history .card-body {
   display: flex;
   align-items: center;
   padding: 15px;
 }
 
-.individual-match-history img.debater-thumbnail,
-.profile-match-history img.debater-thumbnail {
+.individual-match-history img.debater-thumbnail { /* Class for debater profile thumb */
   border-radius: 50%;
   margin-right: 15px;
   border: 2px solid #0d6efd;
-  width: 60px;
+  width: 60px; /* Adjusted thumbnail size */
   height: 60px;
   object-fit: cover;
 }
 
-.individual-match-history .card-body img.flag-icon,
-.profile-match-history .card-body img.flag-icon {
+.individual-match-history .card-body img.flag-icon {
   border-radius: 3px !important;
   width: 20px;
   height: auto;
@@ -208,39 +181,34 @@ h1, h2, h3, h4, h5, h6 {
   margin-left: 5px;
 }
 
-.individual-match-history h5,
-.profile-match-history h5 {
+.individual-match-history h5 {
   margin-bottom: 5px;
   font-size: 1.25rem;
   color: #212529;
 }
 
-.individual-match-history p,
-.profile-match-history p {
+.individual-match-history p {
   margin-bottom: 3px;
   font-size: 0.95rem;
   color: #6c757d;
 }
 
-.individual-match-history .badge,
-.profile-match-history .badge {
+.individual-match-history .badge {
   font-size: 0.8em;
 }
 
-/* Specific background colors for win/loss */
-.individual-match-history .card.win-card,
-.profile-match-history .card.win-card {
-  background-color: #e6ffe6; /* Lighter green for wins */
+/* Specific background colors for win/loss in individual history */
+.individual-match-history .card[style*="background-color: #e6ffe6;"] {
+  background-color: #e6ffe6 !important;
   border-color: #d4edda;
 }
 
-.individual-match-history .card.loss-card,
-.profile-match-history .card.loss-card {
-  background-color: #ffe6e6; /* Lighter red for losses */
+.individual-match-history .card[style*="background-color: #ffe6e6;"] {
+  background-color: #ffe6e6 !important;
   border-color: #f5c6cb;
 }
 
-/* Debater Profile Section Styles (for dynamic content) */
+/* Debater Profile Section Styles */
 .debater-profile .card {
     text-align: center;
     background-color: #ffffff;
@@ -248,7 +216,7 @@ h1, h2, h3, h4, h5, h6 {
     box-shadow: 0 2px 10px rgba(0,0,0,0.05);
 }
 
-.debater-profile .card-img-top.profile-avatar {
+.debater-profile .card-img-top { /* for profile display in this section only */
     width: 150px;
     height: 150px;
     border-radius: 50%;
@@ -274,7 +242,6 @@ h1, h2, h3, h4, h5, h6 {
     font-size: 1rem;
     color: #555;
     display: flex;
-    align-items: center;
     justify-content: space-between;
     padding: 0 15px;
 }
@@ -286,42 +253,51 @@ h1, h2, h3, h4, h5, h6 {
 .debater-profile .metric-value {
     font-weight: bold;
     color: #0d6efd;
-    width: 50px; /* Fixed width for score to align better */
-    text-align: right;
 }
 
-/* Progress Bar for Metrics */
-.debater-profile .progress {
-    height: 10px;
-    border-radius: 5px;
-    margin-left: 10px;
-    flex-grow: 1;
-    background-color: #e9ecef; /* Lighter background for empty part of bar */
+/* Comparison specific styles */
+.compare-section .compare-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
 }
 
-.debater-profile .progress-bar {
-    background-color: #0d6efd;
-    transition: width 0.5s ease-in-out;
+.compare-section .compare-avatar {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 4px solid #0d6efd;
+    margin-bottom: 10px;
 }
 
-/* Head-to-Head Comparison Styles */
-.comparison-chart-container {
-    max-width: 600px;
-    margin: 0 auto;
+.compare-section .vs-text {
+    font-size: 2.5rem;
+    font-weight: bold;
+    color: #dc3545; /* Bootstrap danger color */
+    margin: 0 20px;
+    align-self: center;
 }
 
-.debater-compare-card {
+.compare-section .metric-table {
+    width: 100%;
+    margin-top: 20px;
+}
+
+.compare-section .metric-table td {
+    padding: 8px;
+    vertical-align: middle;
+}
+
+.compare-section .metric-name {
+    font-weight: bold;
+    color: #333;
     text-align: center;
 }
 
-.debater-compare-card .profile-avatar {
-    width: 100px;
-    height: 100px;
-}
-
-.vs-icon {
-    font-size: 3rem;
-    color: #dc3545; /* Red color for VS */
-    margin: 0 15px;
-    align-self: center;
+.compare-section .score-badge {
+    font-size: 1em;
+    padding: 0.5em 1em;
+    width: 60px; /* Fixed width for score badge */
 }
