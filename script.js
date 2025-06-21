@@ -61,6 +61,9 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             console.error("Error fetching data:", error);
             showToast('Failed to load data! Check console for details and ensure data.json is valid.', 'error');
+            // Clear data if fetching failed to prevent using incomplete/invalid data
+            allDebatersData = [];
+            allMatchesData = [];
             setAppContent(`
                 <div class="container my-5 text-center text-danger animate__animated animate__fadeIn">
                     <i class="fas fa-exclamation-triangle fa-3x mb-3"></i>
@@ -157,7 +160,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="col-md-6 mb-2">
                   <select class="form-select" id="countryFilter">
                     <option value="">Filter by Country</option>
-                    ${[...new Set(debaters.map(d => d.country))].map(country => `<option value="${country}">${country}</option>`).join('')}
+                    ${[...new Set(debaters.map(d => d.country).filter(Boolean))].map(country => `<option value="${country}">${country}</option>`).join('')}
                   </select>
                 </div>
                 <div class="col-md-6 mb-2">
@@ -275,7 +278,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        document.title = `DBA - ${debater.name}'s Profile`;
+        document.title = `DBA - ${debater.name || 'Unknown Debater'}'s Profile`;
 
         let metricsHtml = '';
         const metricLabels = [];
@@ -307,7 +310,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const winRate = totalWinsLosses > 0 ? (((debater.wins || 0) / totalWinsLosses) * 100).toFixed(2) : '0.00';
         const averageMetric = metricScores.length > 0 ? (metricScores.reduce((sum, score) => sum + score, 0) / metricScores.length).toFixed(2) : 'N/A';
 
-        // Provide default values for potentially missing properties
+        // Provide default values for potentially missing properties using optional chaining and nullish coalescing
         const debaterPhoto = debater.photo || 'assets/default_avatar.png';
         const debaterFlag = debater.flag || '';
         const debaterCountryCode = debater.country_code || 'XX';
@@ -415,7 +418,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const individualFullMatchHistorySection = document.getElementById('individualFullMatchHistory');
         if (individualFullMatchHistorySection) {
             const debaterMatches = matches.filter(match =>
-                match.debater1.id === debater.id || match.debater2.id === debater.id
+                match.debater1?.id === debater.id || match.debater2?.id === debater.id
             ).sort((a, b) => {
                 const dateA = a.date ? new Date(a.date) : new Date(0); // Use epoch for missing dates
                 const dateB = b.date ? new Date(b.date) : new Date(0);
@@ -423,18 +426,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (dateA.getTime() !== new Date(0).getTime() && dateB.getTime() !== new Date(0).getTime()) {
                     return dateB.getTime() - dateA.getTime();
                 }
-                return b.id.localeCompare(a.id); // Fallback if dates are missing
+                return (b.id || '').localeCompare(a.id || ''); // Fallback if dates are missing, safely handle missing IDs
             });
 
             let matchesHtml = '';
             if (debaterMatches.length > 0) {
                 debaterMatches.forEach(match => {
                     // Safely get debater and opponent data, with fallbacks
-                    const currentDebaterMatchData = match.debater1.id === debater.id ? match.debater1 : match.debater2;
-                    const opponentMatchData = match.debater1.id === debater.id ? match.debater2 : match.debater1;
+                    const currentDebaterMatchData = match.debater1?.id === debater.id ? match.debater1 : match.debater2;
+                    const opponentMatchData = match.debater1?.id === debater.id ? match.debater2 : match.debater1;
 
                     // Get full data from allDebatersData for opponent, if available
-                    const opponentFullData = allDebatersData.find(d => d.id === opponentMatchData.id);
+                    const opponentFullData = allDebatersData.find(d => d.id === opponentMatchData?.id);
 
                     const isWinner = match.winner === debater.name;
                     const statusBadgeClass = isWinner ? 'bg-success' : 'bg-danger';
@@ -442,10 +445,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     const cardBackgroundClass = isWinner ? 'win-card' : 'loss-card';
 
                     // Use photo and name from full data if available, else from match data, else default
-                    const opponentPhoto = (opponentFullData ? opponentFullData.photo : opponentMatchData.photo) || 'assets/default_avatar.png';
-                    const opponentName = (opponentFullData ? opponentFullData.name : opponentMatchData.name) || 'Unknown Opponent';
-                    const debaterCharacterDisplay = currentDebaterMatchData.character || debater.character || 'Unknown';
-                    const opponentCharacterDisplay = opponentMatchData.character || (opponentFullData ? opponentFullData.character : 'Unknown');
+                    const opponentPhoto = (opponentFullData?.photo || opponentMatchData?.photo) || 'assets/default_avatar.png';
+                    const opponentName = (opponentFullData?.name || opponentMatchData?.name) || 'Unknown Opponent';
+                    const debaterCharacterDisplay = currentDebaterMatchData?.character || debater.character || 'Unknown';
+                    const opponentCharacterDisplay = opponentMatchData?.character || opponentFullData?.character || 'Unknown';
 
                     const matchDate = match.date ? new Date(match.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'Unknown Date';
 
@@ -454,7 +457,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <div class="card shadow p-3 mb-2 d-flex flex-row align-items-center ${cardBackgroundClass} animate__animated animate__fadeIn">
                                 <img src="${debaterPhoto}" width="50" height="50" class="rounded-circle me-3 object-fit-cover" alt="${debaterName}" onerror="onImageError(this)">
                                 <div class="flex-grow-1">
-                                    <h6 class="mb-1 fw-bold">${debaterName} <span class="badge ${statusBadgeClass}">${statusText}</span> vs <a href="#profile/${opponentMatchData.id || ''}" class="text-decoration-none">${opponentName}</a></h6>
+                                    <h6 class="mb-1 fw-bold">${debaterName} <span class="badge ${statusBadgeClass}">${statusText}</span> vs <a href="#profile/${opponentMatchData?.id || ''}" class="text-decoration-none">${opponentName}</a></h6>
                                     <small class="text-muted">Method: ${match.method || 'N/A'} - Character: ${debaterCharacterDisplay} vs ${opponentCharacterDisplay}</small><br>
                                     <small class="text-muted"><i class="fas fa-calendar-alt me-1"></i> Date: ${matchDate} ${match.event ? `(Event: ${match.event})` : ''}</small>
                                 </div>
@@ -483,7 +486,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="col-md-5">
                         <select class="form-select mb-2" id="debaterSelect1" aria-label="Select first debater">
                             <option value="">Select Debater 1</option>
-                            ${debaters.map(d => `<option value="${d.id}">${d.name}</option>`).join('')}
+                            ${debaters.map(d => `<option value="${d.id}">${d.name || 'Unknown Debater'}</option>`).join('')}
                         </select>
                     </div>
                     <div class="col-md-1 d-flex align-items-center justify-content-center">
@@ -492,7 +495,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="col-md-5">
                         <select class="form-select mb-2" id="debaterSelect2" aria-label="Select second debater">
                             <option value="">Select Debater 2</option>
-                            ${debaters.map(d => `<option value="${d.id}">${d.name}</option>`).join('')}
+                            ${debaters.map(d => `<option value="${d.id}">${d.name || 'Unknown Debater'}</option>`).join('')}
                         </select>
                     </div>
                 </div>
@@ -550,7 +553,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let html = `
             <div class="col-md-6">
                 <h3 class="mb-3 text-success">Top Record Debaters DBA <i class="fas fa-crown ms-2"></i></h3>
-                <div class="row g-3">
+                <div class="row g-3" id="topDebatersCards">
         `;
         top3.forEach(debater => {
             const debaterPhoto = debater.photo || 'assets/default_avatar.png';
@@ -562,7 +565,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             html += `
                 <div class="col-md-4">
-                    <div class="card shadow h-100 animate__animated animate__fadeInUp card-hover-effect" role="button" aria-label="View ${debaterName}'s profile" onclick="window.location.hash='#profile/${debater.id}'">
+                    <div class="card shadow h-100 animate__animated animate__fadeInUp card-hover-effect debater-card-link" data-debater-id="${debater.id}" role="button" aria-label="View ${debaterName}'s profile">
                         <img src="${debaterPhoto}" class="card-img-top card-img-fixed-height" alt="${debaterName} photo" loading="lazy" onerror="onImageError(this)"/>
                         <div class="card-body">
                             <h4 class="card-title">${debaterName} ${debaterFlag ? `<img src="${debaterFlag}" width="24" class="ms-2" alt="${debaterCountryCode} flag"/>` : ''}</h4>
@@ -577,7 +580,7 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
             <div class="col-md-6">
                 <h3 class="mb-3 text-danger">Low Record Debaters DBA <i class="fas fa-arrow-down ms-2"></i></h3>
-                <div class="row g-3">
+                <div class="row g-3" id="lowDebatersCards">
         `;
         low3.forEach(debater => {
             const debaterPhoto = debater.photo || 'assets/default_avatar.png';
@@ -588,7 +591,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const recordClass = (debater.wins || 0) > (debater.losses || 0) ? 'bg-success' : 'bg-danger';
             html += `
                 <div class="col-md-4">
-                    <div class="card shadow h-100 animate__animated animate__fadeInUp card-hover-effect" role="button" aria-label="View ${debaterName}'s profile" onclick="window.location.hash='#profile/${debater.id}'">
+                    <div class="card shadow h-100 animate__animated animate__fadeInUp card-hover-effect debater-card-link" data-debater-id="${debater.id}" role="button" aria-label="View ${debaterName}'s profile">
                         <img src="${debaterPhoto}" class="card-img-top card-img-fixed-height" alt="${debaterName} photo" loading="lazy" onerror="onImageError(this)"/>
                         <div class="card-body">
                             <h4 class="card-title">${debaterName} ${debaterFlag ? `<img src="${debaterFlag}" width="24" class="ms-2" alt="${debaterCountryCode} flag"/>` : ''}</h4>
@@ -603,6 +606,16 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         `;
         topLowRecordsSection.innerHTML = html;
+
+        // Attach event listeners for the new debater cards
+        document.querySelectorAll('.debater-card-link').forEach(card => {
+            card.addEventListener('click', () => {
+                const debaterId = card.dataset.debaterId;
+                if (debaterId) {
+                    window.location.hash = `#profile/${debaterId}`;
+                }
+            });
+        });
     }
 
     /**
@@ -754,14 +767,18 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!highTierBody || !midTierBody || !lowTierBody) return;
 
         // Apply filters
-        const searchTerm = document.getElementById('leaderboardSearch')?.value.toLowerCase() || '';
-        const tierFilter = document.getElementById('tierFilter')?.value || '';
-        const countryFilter = document.getElementById('countryFilter')?.value || '';
+        const leaderboardSearch = document.getElementById('leaderboardSearch');
+        const tierFilter = document.getElementById('tierFilter');
+        const countryFilter = document.getElementById('countryFilter');
+
+        const searchTerm = leaderboardSearch?.value.toLowerCase() || '';
+        const tierValue = tierFilter?.value || '';
+        const countryValue = countryFilter?.value || '';
 
         let filteredDebaters = debaters.filter(debater => {
             const matchesSearch = (debater.name || '').toLowerCase().includes(searchTerm);
-            const matchesTier = tierFilter === '' || debater.tier === tierFilter;
-            const matchesCountry = countryFilter === '' || debater.country === countryFilter;
+            const matchesTier = tierValue === '' || debater.tier === tierValue;
+            const matchesCountry = countryValue === '' || debater.country === countryValue;
             return matchesSearch && matchesTier && matchesCountry;
         });
 
@@ -773,11 +790,13 @@ document.addEventListener('DOMContentLoaded', () => {
             let valA, valB;
 
             switch (sortColumn) {
-                case 'rank': // This would require pre-calculating ranks based on filtered data if rank isn't a direct property
-                    // For now, let's sort by wins as a proxy for rank if 'rank' isn't explicitly calculated.
+                case 'rank':
+                    // Default sorting for 'rank' is by wins (descending for ascending rank)
+                    // If rank is not explicitly defined in data, use wins as a proxy.
                     valA = a.wins || 0;
                     valB = b.wins || 0;
-                    break;
+                    // For rank, higher wins means higher rank (lower numerical rank)
+                    return sortOrder === 'asc' ? valB - valA : valA - valB;
                 case 'name':
                     valA = (a.name || '').toLowerCase();
                     valB = (b.name || '').toLowerCase();
@@ -791,8 +810,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     valB = b.wins || 0;
                     break;
                 default:
-                    valA = a.id; // Fallback to ID
-                    valB = b.id;
+                    valA = a.id || ''; // Fallback to ID for consistent sorting
+                    valB = b.id || '';
             }
 
             if (typeof valA === 'string') {
@@ -1017,12 +1036,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
                 const winnerName = match.winner || 'N/A';
-                // Determine winner badge class based on winner name matching debater names
+                // Determine winner badge class more dynamically
                 let winnerBadgeClass = 'bg-secondary'; // Default neutral color
-                if (winnerName === debater1Name && winnerName !== 'N/A') {
-                    winnerBadgeClass = 'bg-primary'; // Assuming debater1 is "good" or primary color
-                } else if (winnerName === debater2Name && winnerName !== 'N/A') {
-                    winnerBadgeClass = 'bg-danger'; // Assuming debater2 is "bad" or danger color
+                if (winnerName !== 'N/A') {
+                    if (winnerName === debater1Name) {
+                        winnerBadgeClass = 'bg-primary';
+                    } else if (winnerName === debater2Name) {
+                        winnerBadgeClass = 'bg-danger';
+                    }
                 }
 
 
@@ -1131,8 +1152,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     const matchDate = match.date ? new Date(match.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'N/A';
 
                     // Use opponentFullData if available, otherwise fallback to opponentMatchData, then defaults
-                    const opponentName = (opponentFullData ? opponentFullData.name : opponentMatchData?.name) || 'Unknown Opponent';
-                    const opponentPhoto = (opponentFullData ? opponentFullData.photo : opponentMatchData?.photo) || 'assets/default_avatar.png';
+                    const opponentName = (opponentFullData?.name || opponentMatchData?.name) || 'Unknown Opponent';
+                    const opponentPhoto = (opponentFullData?.photo || opponentMatchData?.photo) || 'assets/default_avatar.png';
                     const matchMethod = match.method || 'N/A';
 
                     html += `
@@ -1187,9 +1208,15 @@ document.addEventListener('DOMContentLoaded', () => {
             countryFilter.addEventListener('change', () => renderLeaderboard(debaters));
         }
 
-        // Leaderboard Sorting
-        document.querySelectorAll('#leaderboard table thead th[data-sort]').forEach(header => {
-            header.addEventListener('click', () => {
+        // Leaderboard Sorting - delegated event listener for future-proof
+        document.querySelectorAll('#leaderboard table thead').forEach(thead => {
+            thead.removeEventListener('click', handleLeaderboardSort); // Remove old listener to prevent duplicates
+            thead.addEventListener('click', handleLeaderboardSort);
+        });
+
+        function handleLeaderboardSort(event) {
+            const header = event.target.closest('th[data-sort]');
+            if (header) {
                 const column = header.dataset.sort;
                 let order = 'asc';
                 if (currentLeaderboardSort.column === column) {
@@ -1197,8 +1224,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 currentLeaderboardSort = { column, order };
                 renderLeaderboard(debaters);
-            });
-        });
+            }
+        }
 
         // Ensure Chart.js instances are destroyed before re-rendering new ones
         if (overallStatsChartInstance) {
@@ -1247,7 +1274,7 @@ document.addEventListener('DOMContentLoaded', () => {
             comparisonChartInstance = null;
         }
 
-        if (!id1 || !id2 || id1 === id2) { // Added id1 === id2 check
+        if (!id1 || !id2 || id1 === id2) { // Added id1 === id2 check to prevent comparing same debater
             comparisonResults.innerHTML = `
                 <div class="col-12 text-center text-muted">
                     <p><i class="fas fa-info-circle me-2"></i> Select two <strong>different</strong> debaters above to compare their profiles.</p>
@@ -1424,17 +1451,25 @@ document.addEventListener('DOMContentLoaded', () => {
         // Ensure nav links are correctly highlighted
         document.querySelectorAll('.navbar-nav .nav-link').forEach(link => {
             link.classList.remove('active');
-            if (link.getAttribute('href') === hash) {
+            const linkHref = link.getAttribute('href');
+            if (linkHref === hash || (hash.startsWith('#profile/') && linkHref === '#home')) {
+                // If on a profile page, highlight home as it's the main entry.
+                // Or if you have a dedicated 'Profile' link in nav, highlight that.
                 link.classList.add('active');
-            } else if (hash.startsWith('#profile/') && link.getAttribute('href') === '#home') {
-                 // For profile pages, highlight home, or make a separate "profile" link if you have one
-                 // For now, let's assume home is the fallback
-                 // link.classList.add('active'); // You might want to refine this logic
             }
         });
     }
 
     // --- Initial Load ---
+
+    // Show a loading message while data is being fetched
+    setAppContent(`
+        <div class="container my-5 text-center animate__animated animate__fadeIn">
+            <i class="fas fa-spinner fa-spin fa-3x mb-3 text-primary"></i>
+            <h2>Loading data...</h2>
+            <p>Please wait while we fetch the latest debater information.</p>
+        </div>
+    `);
 
     // Load data and render initial page based on hash
     fetchData().then(() => {
