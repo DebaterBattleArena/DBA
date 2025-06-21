@@ -11,17 +11,16 @@ document.addEventListener('DOMContentLoaded', () => {
     function showToast(message, type = 'info') {
         const toastEl = document.getElementById('liveToast');
         const toastBody = document.getElementById('toastBody');
-        if (!toastEl || !toastBody) return; // Exit if elements are not found
+        if (!toastEl || !toastBody) return; // Guard against missing elements
 
         toastBody.textContent = message;
 
-        // Reset and set new background color for toast
         toastEl.classList.remove('text-bg-primary', 'text-bg-success', 'text-bg-danger', 'text-bg-warning', 'text-bg-info');
         if (type === 'success') toastEl.classList.add('text-bg-success');
         else if (type === 'error') toastEl.classList.add('text-bg-danger');
         else if (type === 'warning') toastEl.classList.add('text-bg-warning');
         else if (type === 'info') toastEl.classList.add('text-bg-info');
-        else toastEl.classList.add('text-bg-primary'); // Default color
+        else toastEl.classList.add('text-bg-primary');
 
         const toast = new bootstrap.Toast(toastEl);
         toast.show();
@@ -47,14 +46,15 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log("Fetching data.json..."); // Log for debugging
             const response = await fetch('data.json'); 
             if (!response.ok) {
-                const errorText = response.statusText || `HTTP error! Status: ${response.status}`;
+                // Check for HTTP errors like 404
+                const errorText = response.statusText ? response.statusText : `HTTP error! Status: ${response.status}`;
                 throw new Error(`Failed to fetch data.json: ${errorText}`);
             }
             const data = await response.json();
             allDebatersData = data.debaters;
             allMatchesData = data.matches;
             console.log("Data loaded successfully:", allDebatersData, allMatchesData); // Log success
-            showToast('Data loaded successfully!', 'success');
+            // showToast('Data loaded successfully!', 'success'); // Optional: can remove this toast as well
             return data;
         } catch (error) {
             console.error("Error fetching or parsing data.json:", error); // Log detailed error
@@ -276,7 +276,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <div class="card shadow p-4 animate__animated animate__fadeIn">
                                 <div class="text-center">
                                     <img src="${getSafeImagePath(debater.photo)}" class="profile-avatar mb-3 animate__animated animate__zoomIn" alt="${debater.name} Profile" loading="lazy">
-                                    <h2 class="profile-name animate__animated animate__fadeInDown">${debater.name} <img src="${debater.flag}" width="30" class="ms-2" alt="${debater.country_code}"/></h2>
+                                    <h2 class="profile-name animate__animated animate__fadeInDown">${debater.name} <img src="${getSafeImagePath(debater.flag)}" width="30" class="ms-2" alt="${debater.country_code}"/></h2>
                                     <p class="profile-record animate__animated animate__fadeIn">Record: <span class="badge ${debater.wins > debater.losses ? 'bg-success' : 'bg-danger'}">${debater.record}</span></p>
                                     <p class="text-muted"><i class="fas fa-percentage me-1"></i> Win Rate: ${winRate}% | <i class="fas fa-gamepad me-1"></i> Total Matches: ${totalMatches}</p>
                                     <p class="text-muted"><i class="fas fa-star-half-alt me-1"></i> Average Metric Score: ${averageMetric}/10</p>
@@ -324,7 +324,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Render Radar Chart
             const ctxRadar = document.getElementById('radarChart');
-            if (ctxRadar) {
+            if (ctxRadar) { // Ensure canvas element exists before rendering chart
                 new Chart(ctxRadar, {
                     type: 'radar',
                     data: {
@@ -392,35 +392,40 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 let matchesHtml = '';
                 if (debaterMatches.length > 0) {
-                    debaterMatches.forEach(match => {
-                        const isWinner = match.winner === debater.name;
-                        const opponent = match.debater1.id === debater.id ? match.debater2 : match.debater1;
-                        const statusBadgeClass = isWinner ? 'bg-success' : 'bg-danger';
-                        const statusText = isWinner ? 'WIN' : 'LOSS';
-                        const cardBackgroundClass = isWinner ? 'win-card' : 'loss-card';
-                        
-                        const opponentDebater = debaters.find(d => d.id === opponent.id);
-                        const opponentPhoto = getSafeImagePath(opponentDebater ? opponentDebater.photo : '');
-                        const matchDate = match.date ? new Date(match.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'Unknown Date';
+                    matchesHtml = '<div class="col-12"><p class="text-center text-muted">Loading matches...</p></div>'; // Temp message
+                    setTimeout(() => { // Use timeout to allow initial render
+                        matchesHtml = '';
+                        debaterMatches.forEach(match => {
+                            const isWinner = match.winner === debater.name;
+                            const opponent = match.debater1.id === debater.id ? match.debater2 : match.debater1;
+                            const statusBadgeClass = isWinner ? 'bg-success' : 'bg-danger';
+                            const statusText = isWinner ? 'WIN' : 'LOSS';
+                            const cardBackgroundClass = isWinner ? 'win-card' : 'loss-card';
+                            
+                            const opponentDebater = debaters.find(d => d.id === opponent.id);
+                            const opponentPhoto = getSafeImagePath(opponentDebater ? opponentDebater.photo : '');
+                            const matchDate = match.date ? new Date(match.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'Unknown Date';
 
-                        matchesHtml += `
-                            <div class="col-md-12">
-                                <div class="card shadow p-3 mb-2 d-flex flex-row align-items-center ${cardBackgroundClass} animate__animated animate__fadeIn">
-                                    <img src="${getSafeImagePath(debater.photo)}" width="50" class="rounded-circle me-3" alt="${debater.name}" loading="lazy">
-                                    <div class="flex-grow-1">
-                                        <h6 class="mb-1 fw-bold">${debater.name} <span class="badge ${statusBadgeClass}">${statusText}</span> vs ${opponent.name}</h6>
-                                        <small class="text-muted">Method: ${match.method} - Character: ${debater.character} vs ${opponent.character}</small><br>
-                                        <small class="text-muted"><i class="fas fa-calendar-alt me-1"></i> Date: ${matchDate} ${match.event ? `(Event: ${match.event})` : ''}</small>
+                            matchesHtml += `
+                                <div class="col-md-12">
+                                    <div class="card shadow p-3 mb-2 d-flex flex-row align-items-center ${cardBackgroundClass} animate__animated animate__fadeIn">
+                                        <img src="${getSafeImagePath(debater.photo)}" width="50" class="rounded-circle me-3" alt="${debater.name}" loading="lazy">
+                                        <div class="flex-grow-1">
+                                            <h6 class="mb-1 fw-bold">${debater.name} <span class="badge ${statusBadgeClass}">${statusText}</span> vs ${opponent.name}</h6>
+                                            <small class="text-muted">Method: ${match.method} - Character: ${debater.character} vs ${opponent.character}</small><br>
+                                            <small class="text-muted"><i class="fas fa-calendar-alt me-1"></i> Date: ${matchDate} ${match.event ? `(Event: ${match.event})` : ''}</small>
+                                        </div>
+                                        <img src="${opponentPhoto}" width="50" class="rounded-circle ms-3" alt="${opponent.name}" loading="lazy">
                                     </div>
-                                    <img src="${opponentPhoto}" width="50" class="rounded-circle ms-3" alt="${opponent.name}" loading="lazy">
                                 </div>
-                            </div>
-                        `;
-                    });
+                            `;
+                        });
+                        individualFullMatchHistorySection.innerHTML = matchesHtml;
+                    }, 50); // Small delay to allow canvas to render
                 } else {
                     matchesHtml = `<div class="col-12"><p class="text-center text-muted">No match history available for this debater.</p></div>`;
+                    individualFullMatchHistorySection.innerHTML = matchesHtml;
                 }
-                individualFullMatchHistorySection.innerHTML = matchesHtml;
             }
         }
 
@@ -527,361 +532,6 @@ document.addEventListener('DOMContentLoaded', () => {
             topLowRecordsSection.innerHTML = html;
         }
 
-        function renderQuickViewProfiles(debaters) {
-            console.log("Rendering Quick View Profiles..."); // Log for debugging
-            const quickViewProfilesSection = document.getElementById('quickViewProfiles');
-            if (!quickViewProfilesSection) return;
-
-            let html = '';
-            debaters.slice(0, 3).forEach(debater => { // Showing first 3 for quick view
-                html += `
-                    <div class="col-md-4">
-                        <div class="card shadow h-100 text-center animate__animated animate__fadeInUp" aria-label="View quick summary of ${debater.name}">
-                            <img src="${getSafeImagePath(debater.photo)}" class="card-img-top" alt="${debater.name}" loading="lazy"/>
-                            <div class="card-body">
-                                <h3 class="clickable-name" data-debater-id="${debater.id}" tabindex="0" role="button">
-                                    ${debater.name} <img src="${getSafeImagePath(debater.flag)}" width="24" class="ms-2" alt="${debater.country_code}"/>
-                                </h3>
-                                <p class="card-text">Record: <span class="badge ${debater.wins > debater.losses ? 'bg-success' : 'bg-danger'}">${debater.record}</span></p>
-                                <div id="${debater.id}-desc" class="debater-desc">
-                                    <p><strong>Character:</strong> ${debater.character}</p>
-                                    <p><strong>Summary:</strong> ${debater.summary}</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            });
-            quickViewProfilesSection.innerHTML = html;
-
-            quickViewProfilesSection.querySelectorAll('.clickable-name').forEach(element => {
-                element.addEventListener('click', () => {
-                    const debaterId = element.dataset.debaterId;
-                    const descElement = document.getElementById(`${debaterId}-desc`);
-                    if (descElement) {
-                        descElement.classList.toggle('show');
-                        if (descElement.classList.contains('show')) {
-                            element.setAttribute('aria-expanded', 'true');
-                        } else {
-                            element.setAttribute('aria-expanded', 'false');
-                        }
-                    }
-                });
-                element.addEventListener('keypress', (e) => { // For keyboard accessibility
-                    if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        element.click();
-                    }
-                });
-            });
-        }
-
-        function renderDetailedProfiles(allDebaters, filterQuery = '') {
-            console.log("Rendering Detailed Profiles with query:", filterQuery); // Log for debugging
-            const detailedProfilesSection = document.getElementById('detailedProfilesSection');
-            if (!detailedProfilesSection) return;
-
-            const query = filterQuery.trim().toLowerCase();
-
-            if (query === '') {
-                detailedProfilesSection.innerHTML = `
-                    <div class="col-12 text-center text-muted animate__animated animate__fadeIn">
-                        <p><i class="fas fa-search me-2"></i> Ketik nama debater di atas untuk melihat metrik profil lengkap mereka.</p>
-                    </div>
-                `;
-                return;
-            }
-
-            const filteredDebaters = allDebaters.filter(debater =>
-                debater.name.toLowerCase().includes(query)
-            );
-
-            if (filteredDebaters.length === 0) {
-                detailedProfilesSection.innerHTML = `
-                    <div class="col-12 text-center text-muted animate__animated animate__fadeIn">
-                        <p><i class="fas fa-exclamation-circle me-2"></i> Tidak ada debater yang ditemukan dengan nama "${filterQuery}".</p>
-                    </div>
-                `;
-                return;
-            }
-
-            let html = '';
-            filteredDebaters.forEach(debater => {
-                let metricsHtml = '';
-                for (const [metricName, metricScore] of Object.entries(debater.metrics)) {
-                    const widthPercentage = (parseFloat(metricScore) / 10) * 100;
-                    metricsHtml += `
-                        <div class="profile-metric">
-                            <span>${metricName}:</span>
-                            <div class="progress flex-grow-1" role="progressbar" aria-label="${metricName} score" aria-valuenow="${metricScore}" aria-valuemin="0" aria-valuemax="10">
-                                <div class="progress-bar" style="width: ${widthPercentage}%;"></div>
-                            </div>
-                            <span class="metric-value">${metricScore}/10</span>
-                        </div>
-                    `;
-                }
-
-                html += `
-                    <div class="col-lg-4 col-md-6 animate__animated animate__fadeInUp">
-                        <div class="card h-100">
-                            <img src="${getSafeImagePath(debater.photo)}" class="card-img-top profile-avatar" alt="${debater.name} Profile" loading="lazy">
-                            <div class="card-body">
-                                <h3 class="profile-name">
-                                    <a href="#profile/${debater.id}" class="text-decoration-none">${debater.name}</a>
-                                    <img src="${getSafeImagePath(debater.flag)}" width="24" class="ms-2" alt="${debater.country_code}"/>
-                                </h3>
-                                <p class="profile-record">Record: <span class="badge ${debater.wins > debater.losses ? 'bg-success' : 'bg-danger'}">${debater.record}</span></p>
-                                <div class="profile-metrics">
-                                    ${metricsHtml}
-                                </div>
-                                <div class="profile-detail mt-3">
-                                    <p><strong>Favorite Character:</strong> ${debater.character}</p>
-                                    <p><strong>Bio:</strong> ${debater.bio}</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            });
-            detailedProfilesSection.innerHTML = html;
-        }
-
-        function renderLeaderboard(debaters, query = '', filterTier = '', filterCountry = '', sortColumn = 'rank', sortOrder = 'asc') {
-            console.log("Rendering Leaderboard with query:", query, "tier:", filterTier, "country:", filterCountry, "sort:", sortColumn, sortOrder); // Log for debugging
-            const highTierBody = document.getElementById('highTierBody');
-            const midTierBody = document.getElementById('midTierBody');
-            const lowTierBody = document.getElementById('lowTierBody');
-
-            if (!highTierBody || !midTierBody || !lowTierBody) return;
-
-            highTierBody.innerHTML = '';
-            midTierBody.innerHTML = '';
-            lowTierBody.innerHTML = '';
-
-            let filteredDebaters = debaters.filter(debater =>
-                (query === '' || debater.name.toLowerCase().includes(query.toLowerCase()) || debater.country.toLowerCase().includes(query.toLowerCase()) || debater.country_code.toLowerCase().includes(query.toLowerCase())) &&
-                (filterTier === '' || debater.tier === filterTier) &&
-                (filterCountry === '' || debater.country === filterCountry)
-            );
-
-            function sortTier(tierList) {
-                return tierList.sort((a, b) => {
-                    let valA, valB;
-                    // For rank/wins, sort by actual wins
-                    if (sortColumn === 'rank' || sortColumn === 'wins') { 
-                        valA = a.wins;
-                        valB = b.wins;
-                    } else if (sortColumn === 'name' || sortColumn === 'country') {
-                        valA = a[sortColumn];
-                        valB = b[sortColumn];
-                    } else {
-                        // Fallback for unexpected sortColumn, perhaps sort by name
-                        valA = a.name;
-                        valB = b.name;
-                    }
-
-                    if (typeof valA === 'string') {
-                        return sortOrder === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
-                    } else {
-                        return sortOrder === 'asc' ? valA - valB : valB - valA;
-                    }
-                });
-            }
-
-            const highTier = sortTier(filteredDebaters.filter(d => d.tier === 'High Tier'));
-            const midTier = sortTier(filteredDebaters.filter(d => d.tier === 'Mid Tier'));
-            const lowTier = sortTier(filteredDebaters.filter(d => d.tier === 'Low Tier'));
-
-            function populateTier(tbody, tierList) {
-                if (tierList.length === 0 && (query !== '' || filterTier !== '' || filterCountry !== '')) {
-                    tbody.innerHTML = `<tr><td colspan="5" class="text-muted">No debaters found in this tier matching your filters.</td></tr>`;
-                    return;
-                }
-                const minRows = Math.max(tierList.length, 5); // Ensure at least 5 rows for appearance
-                for (let i = 0; i < minRows; i++) {
-                    const debater = tierList[i];
-                    if (debater) {
-                        tbody.innerHTML += `
-                            <tr>
-                                <td>${i + 1}</td>
-                                <td><img src="${getSafeImagePath(debater.photo)}" width="40" class="rounded-circle" alt="${debater.name}" loading="lazy"></td>
-                                <td><a href="#profile/${debater.id}" class="text-decoration-none">${debater.name}</a></td>
-                                <td><img src="${getSafeImagePath(debater.flag)}" width="20" class="me-1" alt="${debater.country_code}"> ${debater.country_code}</td>
-                                <td><span class="badge ${debater.wins > debater.losses ? 'bg-success' : 'bg-danger'}">${debater.record}</span></td>
-                            </tr>
-                        `;
-                    } else {
-                        tbody.innerHTML += `<tr><td>${i + 1}</td><td></td><td></td><td></td><td></td></tr>`;
-                    }
-                }
-            }
-
-            populateTier(highTierBody, highTier);
-            populateTier(midTierBody, midTier);
-            populateTier(lowTierBody, lowTier);
-
-            // Update sort icons and aria-sort attributes
-            document.querySelectorAll('.table thead th[data-sort]').forEach(th => {
-                const icon = th.querySelector('.sort-icon');
-                if (icon) {
-                    icon.classList.remove('fa-sort-up', 'fa-sort-down', 'fa-sort');
-                    if (th.dataset.sort === sortColumn) {
-                        icon.classList.add(sortOrder === 'asc' ? 'fa-sort-up' : 'fa-sort-down');
-                        th.setAttribute('aria-sort', sortOrder === 'asc' ? 'ascending' : 'descending');
-                    } else {
-                        icon.classList.add('fa-sort');
-                        th.setAttribute('aria-sort', 'none');
-                    }
-                }
-            });
-        }
-
-        function renderOverallStatsChart(debaters) {
-            console.log("Rendering Overall Stats Chart..."); // Log for debugging
-            const ctx = document.getElementById('overallStatsChart');
-            if (!ctx) return;
-
-            // Destroy previous chart instance if it exists
-            if (overallStatsChartInstance) {
-                overallStatsChartInstance.destroy();
-                overallStatsChartInstance = null;
-            }
-
-            const tierCounts = debaters.reduce((acc, debater) => {
-                acc[debater.tier] = (acc[debater.tier] || 0) + 1;
-                return acc;
-            }, {});
-
-            // Create new chart instance
-            overallStatsChartInstance = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: Object.keys(tierCounts),
-                    datasets: [
-                        {
-                            label: 'Debaters per Tier',
-                            data: Object.values(tierCounts),
-                            backgroundColor: ['#ffc107', '#6c757d', '#343a40'], // Warning, Secondary, Dark
-                            borderColor: ['#e0a800', '#5a6268', '#23272b'],
-                            borderWidth: 1
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        title: {
-                            display: true,
-                            text: 'Debaters Distribution by Tier',
-                            font: { size: 16, family: 'Poppins' }
-                        },
-                        legend: { display: false }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: { stepSize: 1 },
-                            grid: { display: false }
-                        },
-                        x: {
-                            grid: { display: false }
-                        }
-                    }
-                }
-            });
-        }
-
-        function renderRecentMatches(matches) {
-            console.log("Rendering Recent Matches..."); // Log for debugging
-            const recentMatchesSection = document.getElementById('recentMatchesSection');
-            if (!recentMatchesSection) return;
-
-            let html = '';
-            const sortedMatches = [...matches].sort((a, b) => {
-                const dateA = a.date ? new Date(a.date) : 0;
-                const dateB = b.date ? new Date(b.date) : 0;
-                if (dateA && dateB) return dateB - dateA;
-                return b.id.localeCompare(a.id);
-            });
-
-            sortedMatches.slice(0, 3).forEach(match => {
-                html += `
-                    <div class="col-lg-4 col-md-6 col-sm-12 animate__animated animate__fadeInUp">
-                        <div class="card match-card">
-                            <img src="${getSafeImagePath(match.image)}" class="match-img-16by9 card-img-top" alt="${match.debater1.name} vs ${match.debater2.name}" loading="lazy">
-                            <div class="card-body text-center">
-                                <h5 class="card-title fw-bold">
-                                    ${match.country1_flag} <i class="fas fa-fist-raised mx-2" style="color:#FFD700;"></i> ${match.country2_flag}
-                                </h5>
-                                <div class="debater-info">
-                                    <strong>${match.debater1.name} (${match.debater1.character})</strong> <span class="badge ${match.winner === match.debater1.name ? 'bg-success' : 'bg-danger'}">${match.winner === match.debater1.name ? 'WIN' : 'LOSS'}</span>
-                                </div>
-                                <div class="debater-info">
-                                    <strong>${match.debater2.name} (${match.debater2.character})</strong> <span class="badge ${match.winner === match.debater2.name ? 'bg-success' : 'bg-danger'}">${match.winner === match.debater2.name ? 'WIN' : 'LOSS'}</span>
-                                </div>
-                                <small class="text-muted mt-2 d-block">Method: ${match.method} ${match.event ? `(Event: ${match.event})` : ''}</small>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            });
-            recentMatchesSection.innerHTML = html;
-        }
-
-        function renderIndividualMatchHistory(debaters, matches) {
-            console.log("Rendering Individual Match History..."); // Log for debugging
-            const individualMatchHistorySection = document.getElementById('individualMatchHistory');
-            if (!individualMatchHistorySection) return;
-
-            let html = '';
-            // Only show recent match for a few key debaters or all if the list is small.
-            // For now, let's render the latest match for the first 3 debaters who have matches.
-            const debatersWithMatches = debaters.filter(d => matches.some(m => m.debater1.id === d.id || m.debater2.id === d.id)).slice(0,3);
-
-            debatersWithMatches.forEach(debater => {
-                const debaterMatches = matches.filter(match =>
-                    match.debater1.id === debater.id || match.debater2.id === debater.id
-                ).sort((a, b) => {
-                    const dateA = a.date ? new Date(a.date) : 0;
-                    const dateB = b.date ? new Date(b.date) : 0;
-                    if (dateA && dateB) return dateB - dateA;
-                    return b.id.localeCompare(a.id);
-                });
-
-                if (debaterMatches.length > 0) {
-                    const latestMatch = debaterMatches[0];
-                    const isWinner = latestMatch.winner === debater.name;
-                    const opponent = latestMatch.debater1.id === debater.id ? latestMatch.debater2 : latestMatch.debater1;
-                    const statusText = isWinner ? 'Win' : 'Loss';
-                    const cardClass = isWinner ? 'win-card' : 'loss-card';
-                    
-                    const opponentDebater = debaters.find(d => d.id === opponent.id);
-                    const opponentPhoto = getSafeImagePath(opponentDebater ? opponentDebater.photo : '');
-
-                    html += `
-                        <div class="col-md-6 animate__animated animate__fadeInUp">
-                            <div class="card shadow ${cardClass}">
-                                <div class="card-body d-flex align-items-center">
-                                    <img src="${getSafeImagePath(debater.photo)}" class="me-3 rounded debater-thumbnail" alt="${debater.name}" loading="lazy">
-                                    <div class="flex-grow-1">
-                                        <h5 class="fw-bold">${debater.name} <img src="${getSafeImagePath(debater.flag)}" width="20" class="ms-1 flag-icon" alt="${debater.country_code}"></h5>
-                                        <p class="mb-1">Record: <span class="badge ${debater.wins > debater.losses ? 'bg-success' : 'bg-danger'}">${debater.record}</span></p>
-                                        <p class="mb-0">${statusText} vs ${opponent.name} [${latestMatch.method}]</p>
-                                    </div>
-                                    <img src="${opponentPhoto}" width="40" class="ms-3 rounded-circle" alt="${opponent.name}" loading="lazy">
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                    console.log(`Added match history for ${debater.name}`); // Debugging each history card
-                } else {
-                    console.log(`No matches found for ${debater.name} to display in history.`);
-                }
-            });
-            individualMatchHistorySection.innerHTML = html;
-        }
-
         // --- Event Listener Attachments ---
 
         function attachHomePageEventListeners(debaters, matches) {
@@ -956,8 +606,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (debaterSelect1) debaterSelect1.addEventListener('change', updateComparison);
             if (debaterSelect2) debaterSelect2.addEventListener('change', updateComparison);
-            console.log("Compare Page Event Listeners Attached."); // Log for debugging
         }
+
 
         // --- Router Logic ---
         function router() {
@@ -965,20 +615,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const path = window.location.hash.slice(1) || 'home';
             const [route, id] = path.split('/');
 
-            // Show spinner while loading content, only if we are changing "pages"
-            const appRoot = document.getElementById('app-root');
-            if (appRoot) {
-                appRoot.innerHTML = `
-                    <div class="container d-flex justify-content-center align-items-center" style="min-height: 80vh;">
-                        <div class="text-center">
-                            <div class="spinner-border text-primary" role="status" aria-hidden="true">
-                                <span class="visually-hidden">Loading content...</span>
-                            </div>
-                            <p class="mt-3" role="status">Loading content...</p>
-                        </div>
-                    </div>
-                `;
-            }
+            // No initial spinner in app-root, it will be filled directly
         
             // Fetch data (this is the only async part)
             fetchData().then(data => {
@@ -1020,10 +657,9 @@ document.addEventListener('DOMContentLoaded', () => {
         router();
     });
     ```
-
 ---
 
-**4. `data.json` (File terpisah, dengan penghapusan Newbie One)**
+### 3. `data.json` (Sama persis dengan versi sebelumnya, tanpa Newbie One)
 
 ```json
 {
