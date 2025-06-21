@@ -747,44 +747,71 @@ document.addEventListener('DOMContentLoaded', () => {
         individualMatchHistorySection.innerHTML = html;
     }
 
-    // --- Event Listener Attachments (for HomePage) ---
+    // --- Debater Profile Detail Rendering on Home Page Search ---
+    function renderDetailedProfiles(debaters, query = '') {
+        const detailedProfilesSection = document.getElementById('detailedProfilesSection');
+        if (!detailedProfilesSection) return;
 
-    function attachHomePageEventListeners(debaters, matches) {
-        // Leaderboard Search & Filters
-        const leaderboardSearchInput = document.getElementById('leaderboardSearch');
-        const tierFilterSelect = document.getElementById('tierFilter');
-        const countryFilterSelect = document.getElementById('countryFilter');
+        detailedProfilesSection.innerHTML = ''; // Clear previous results
 
-        const applyLeaderboardFilters = () => {
-            const query = leaderboardSearchInput ? leaderboardSearchInput.value : '';
-            const tier = tierFilterSelect ? tierFilterSelect.value : '';
-            const country = countryFilterSelect ? countryFilterSelect.value : '';
-            renderLeaderboard(debaters, query, tier, country, currentLeaderboardSort.column, currentLeaderboardSort.order);
-        };
+        const filteredDebaters = debaters.filter(debater =>
+            query === '' || debater.name.toLowerCase().includes(query.toLowerCase())
+        );
 
-        if (leaderboardSearchInput) leaderboardSearchInput.addEventListener('keyup', applyLeaderboardFilters);
-        if (tierFilterSelect) tierFilterSelect.addEventListener('change', applyLeaderboardFilters);
-        if (countryFilterSelect) countryFilterSelect.addEventListener('change', applyLeaderboardFilters);
-
-        // Debater Profile Search
-        const debaterProfileSearchInput = document.getElementById('debaterProfileSearch');
-        if (debaterProfileSearchInput) {
-            debaterProfileSearchInput.addEventListener('keyup', (event) => {
-                renderDetailedProfiles(debaters, event.target.value);
-            });
+        if (filteredDebaters.length === 0 && query !== '') {
+            detailedProfilesSection.innerHTML = `
+                <div class="col-12 text-center text-muted animate__animated animate__fadeIn">
+                    <p><i class="fas fa-exclamation-circle me-2"></i> No debaters found matching "${query}".</p>
+                </div>
+            `;
+            return;
         }
 
-        // Leaderboard Sorting
-        document.querySelectorAll('.table thead th[data-sort]').forEach(header => {
-            header.addEventListener('click', () => {
-                const sortColumn = header.dataset.sort;
-                // Toggle sort order
-                currentLeaderboardSort.order = (currentLeaderboardSort.column === sortColumn && currentLeaderboardSort.order === 'asc') ? 'desc' : 'asc';
-                currentLeaderboardSort.column = sortColumn;
-                applyLeaderboardFilters(); // Re-render with new sort
-            });
+        // Limit to top 3 results for detailed view on home page to keep it concise
+        filteredDebaters.slice(0, 3).forEach(debater => {
+            let metricsHtml = '';
+            const metricLabels = [];
+            const metricScores = [];
+            for (const [metricName, metricScore] of Object.entries(debater.metrics)) {
+                const widthPercentage = (parseFloat(metricScore) / 10) * 100;
+                metricsHtml += `
+                    <div class="profile-metric">
+                        <span>${metricName}:</span>
+                        <div class="progress flex-grow-1" role="progressbar" aria-label="${metricName} score">
+                            <div class="progress-bar" style="width: ${widthPercentage}%;" aria-valuenow="${metricScore}" aria-valuemin="0" aria-valuemax="10"></div>
+                        </div>
+                        <span class="metric-value">${metricScore}/10</span>
+                    </div>
+                `;
+                metricLabels.push(metricName);
+                metricScores.push(parseFloat(metricScore));
+            }
+
+            detailedProfilesSection.innerHTML += `
+                <div class="col-lg-4 col-md-6 animate__animated animate__fadeInUp">
+                    <div class="card shadow p-3 h-100">
+                        <div class="text-center">
+                            <img src="${debater.photo}" class="profile-avatar mb-2" alt="${debater.name}">
+                            <h4 class="profile-name">${debater.name} <img src="${debater.flag}" width="20" class="ms-1" alt="${debater.country_code}"/></h4>
+                            <p class="profile-record">Record: <span class="badge ${debater.wins > debater.losses ? 'bg-success' : 'bg-danger'}">${debater.record}</span></p>
+                            <a href="#profile/${debater.id}" class="btn btn-sm btn-primary mb-3" aria-label="View full profile for ${debater.name}"><i class="fas fa-info-circle me-1"></i> View Full Profile</a>
+                        </div>
+                        <div class="profile-metrics">
+                            ${metricsHtml}
+                        </div>
+                    </div>
+                </div>
+            `;
         });
+        if (query === '' && filteredDebaters.length === 0) {
+            detailedProfilesSection.innerHTML = `
+                <div class="col-12 text-center text-muted animate__animated animate__fadeIn">
+                  <p><i class="fas fa-search me-2"></i> Ketik nama debater di atas untuk melihat metrik profil lengkap mereka.</p>
+                </div>
+            `;
+        }
     }
+
 
     // --- Comparison Page Logic ---
 
@@ -800,6 +827,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     <p><i class="fas fa-info-circle me-2"></i> Select two debaters above to compare their profiles.</p>
                 </div>
             `;
+            // Destroy previous chart instance if exists
+            if (comparisonChartInstance) {
+                comparisonChartInstance.destroy();
+                comparisonChartInstance = null;
+            }
             return;
         }
 
