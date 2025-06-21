@@ -433,15 +433,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     const currentDebaterMatchData = match.debater1.id === debater.id ? match.debater1 : match.debater2;
                     const opponentMatchData = match.debater1.id === debater.id ? match.debater2 : match.debater1;
 
-                    const opponentFullData = debaters.find(d => d.id === opponentMatchData.id);
+                    // Get full data from allDebatersData for opponent, if available
+                    const opponentFullData = allDebatersData.find(d => d.id === opponentMatchData.id);
 
                     const isWinner = match.winner === debater.name;
                     const statusBadgeClass = isWinner ? 'bg-success' : 'bg-danger';
                     const statusText = isWinner ? 'WIN' : 'LOSS';
                     const cardBackgroundClass = isWinner ? 'win-card' : 'loss-card';
 
-                    const opponentPhoto = opponentFullData ? opponentFullData.photo : 'assets/default_avatar.png';
-                    const opponentName = opponentFullData ? opponentFullData.name : 'Unknown Opponent';
+                    // Use photo and name from full data if available, else from match data, else default
+                    const opponentPhoto = (opponentFullData ? opponentFullData.photo : opponentMatchData.photo) || 'assets/default_avatar.png';
+                    const opponentName = (opponentFullData ? opponentFullData.name : opponentMatchData.name) || 'Unknown Opponent';
                     const debaterCharacterDisplay = currentDebaterMatchData.character || debater.character || 'Unknown';
                     const opponentCharacterDisplay = opponentMatchData.character || (opponentFullData ? opponentFullData.character : 'Unknown');
 
@@ -452,7 +454,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <div class="card shadow p-3 mb-2 d-flex flex-row align-items-center ${cardBackgroundClass} animate__animated animate__fadeIn">
                                 <img src="${debaterPhoto}" width="50" height="50" class="rounded-circle me-3 object-fit-cover" alt="${debaterName}" onerror="onImageError(this)">
                                 <div class="flex-grow-1">
-                                    <h6 class="mb-1 fw-bold">${debaterName} <span class="badge ${statusBadgeClass}">${statusText}</span> vs <a href="#profile/${opponentMatchData.id}" class="text-decoration-none">${opponentName}</a></h6>
+                                    <h6 class="mb-1 fw-bold">${debaterName} <span class="badge ${statusBadgeClass}">${statusText}</span> vs <a href="#profile/${opponentMatchData.id || ''}" class="text-decoration-none">${opponentName}</a></h6>
                                     <small class="text-muted">Method: ${match.method || 'N/A'} - Character: ${debaterCharacterDisplay} vs ${opponentCharacterDisplay}</small><br>
                                     <small class="text-muted"><i class="fas fa-calendar-alt me-1"></i> Date: ${matchDate} ${match.event ? `(Event: ${match.event})` : ''}</small>
                                 </div>
@@ -891,6 +893,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Destroy existing chart instance if it exists
         if (overallStatsChartInstance) {
             overallStatsChartInstance.destroy();
+            overallStatsChartInstance = null;
         }
 
         const tierCounts = debaters.reduce((acc, debater) => {
@@ -991,25 +994,24 @@ document.addEventListener('DOMContentLoaded', () => {
         let html = '';
         if (sortedMatches.length > 0) {
             sortedMatches.forEach(match => {
-                // Safely get debater data, with fallback to match data if not found in allDebatersData
+                // Safely get debater data from allDebatersData first, then fallback to match data
                 const debater1FullData = allDebatersData.find(d => d.id === match.debater1.id);
                 const debater2FullData = allDebatersData.find(d => d.id === match.debater2.id);
 
-                // Use data from allDebatersData if available, otherwise fallback to match data (which might be less complete)
-                const debater1 = debater1FullData || match.debater1;
-                const debater2 = debater2FullData || match.debater2;
+                // Use the full data if found, otherwise use the data embedded in the match object
+                const debater1DataForDisplay = debater1FullData || match.debater1;
+                const debater2DataForDisplay = debater2FullData || match.debater2;
 
-                // Provide default values for potentially missing properties
-                const debater1Photo = debater1.photo || 'assets/default_avatar.png';
-                const debater2Photo = debater2.photo || 'assets/default_avatar.png';
-                const debater1Name = debater1.name || 'Unknown Debater 1';
-                const debater2Name = debater2.name || 'Unknown Debater 2';
-                const debater1Character = debater1.character || 'Unknown';
-                const debater2Character = debater2.character || 'Unknown';
+                // Provide default values for potentially missing properties for display
+                const debater1Photo = debater1DataForDisplay.photo || 'assets/default_avatar.png';
+                const debater2Photo = debater2DataForDisplay.photo || 'assets/default_avatar.png';
+                const debater1Name = debater1DataForDisplay.name || 'Unknown Debater 1';
+                const debater2Name = debater2DataForDisplay.name || 'Unknown Debater 2';
+                const debater1Character = debater1DataForDisplay.character || 'Unknown';
+                const debater2Character = debater2DataForDisplay.character || 'Unknown';
 
-                const winnerName = match.winner || 'N/A'; // Handle missing winner
-                const winnerBadgeClass = winnerName === debater1Name ? 'bg-primary' : 'bg-danger'; // Assuming primary for D1, danger for D2 winner
-                // No need for winnerPhoto if we use debater1Photo/debater2Photo
+                const winnerName = match.winner || 'N/A';
+                const winnerBadgeClass = winnerName === debater1Name ? 'bg-primary' : 'bg-danger';
 
                 const matchDate = match.date ? new Date(match.date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : 'N/A';
                 const matchMethod = match.method || 'N/A';
@@ -1024,7 +1026,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <div class="card-body text-center">
                                 <div class="d-flex justify-content-around align-items-center mb-3">
                                     <div class="debater-info">
-                                        <a href="#profile/${debater1.id}" class="text-decoration-none text-dark">
+                                        <a href="#profile/${debater1DataForDisplay.id || ''}" class="text-decoration-none text-dark">
                                             <img src="${debater1Photo}" class="rounded-circle match-avatar" alt="${debater1Name}" onerror="onImageError(this)">
                                             <p class="mb-0 fw-bold">${debater1Name}</p>
                                         </a>
@@ -1032,7 +1034,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                     </div>
                                     <span class="vs-text fw-bold mx-2">VS</span>
                                     <div class="debater-info">
-                                        <a href="#profile/${debater2.id}" class="text-decoration-none text-dark">
+                                        <a href="#profile/${debater2DataForDisplay.id || ''}" class="text-decoration-none text-dark">
                                             <img src="${debater2Photo}" class="rounded-circle match-avatar" alt="${debater2Name}" onerror="onImageError(this)">
                                             <p class="mb-0 fw-bold">${debater2Name}</p>
                                         </a>
@@ -1071,7 +1073,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         let html = '';
         // Display a few latest matches for 3-5 random debaters for demonstration
-        // Filter out debaters without an 'id' before shuffling/slicing
         const validDebaters = debaters.filter(d => d.id);
         const debatersToShow = validDebaters.sort(() => 0.5 - Math.random()).slice(0, 5); // Pick 5 random debaters
 
@@ -1081,8 +1082,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         debatersToShow.forEach(debater => {
-            // Ensure debater has an ID before filtering matches
-            if (!debater.id) return;
+            if (!debater.id) return; // Skip if debater somehow has no ID
 
             const debaterMatches = matches.filter(match =>
                 match.debater1.id === debater.id || match.debater2.id === debater.id
@@ -1107,7 +1107,6 @@ document.addEventListener('DOMContentLoaded', () => {
                             <ul class="list-group list-group-flush">
                 `;
                 debaterMatches.forEach(match => {
-                    // Safely get opponent data for this specific match
                     const opponentMatchData = match.debater1.id === debater.id ? match.debater2 : match.debater1;
                     const opponentFullData = allDebatersData.find(d => d.id === opponentMatchData.id);
 
@@ -1116,14 +1115,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     const statusText = isWinner ? 'WIN' : 'LOSS';
                     const matchDate = match.date ? new Date(match.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'N/A';
 
+                    // Use opponentFullData if available, otherwise fallback to opponentMatchData
                     const opponentName = (opponentFullData ? opponentFullData.name : opponentMatchData.name) || 'Unknown Opponent';
-                    const opponentPhoto = (opponentFullData ? opponentFullData.photo : 'assets/default_avatar.png') || 'assets/default_avatar.png';
+                    const opponentPhoto = (opponentFullData ? opponentFullData.photo : opponentMatchData.photo) || 'assets/default_avatar.png';
                     const matchMethod = match.method || 'N/A';
 
                     html += `
                         <li class="list-group-item d-flex justify-content-between align-items-center">
                             <div>
-                                <span class="badge ${statusBadgeClass}">${statusText}</span> vs <a href="#profile/${opponentMatchData.id}" class="text-decoration-none">${opponentName}</a>
+                                <span class="badge ${statusBadgeClass}">${statusText}</span> vs <a href="#profile/${opponentMatchData.id || ''}" class="text-decoration-none">${opponentName}</a>
                                 <br><small class="text-muted">${matchMethod} - ${matchDate}</small>
                             </div>
                             <img src="${opponentPhoto}" width="30" height="30" class="rounded-circle object-fit-cover" alt="${opponentName}" onerror="onImageError(this)">
