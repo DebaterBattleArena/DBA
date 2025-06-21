@@ -1,21 +1,21 @@
-/* Custom CSS for the site */
+/* General Styles */
 body {
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Roboto', sans-serif; /* Menggunakan font Roboto */
   background-color: #f8f9fa;
   color: #333;
 }
 
 h1, h2, h3, h4, h5, h6 {
-  font-family: 'Poppins', sans-serif;
-  color: #212529;
+  font-family: 'Poppins', sans-serif; /* Menggunakan font Poppins untuk judul */
+  color: #212529; /* Warna teks gelap untuk judul */
 }
 
+/* Hero Image */
 .hero-image-container {
   position: relative;
   width: 100%;
-  height: 400px; /* Fixed height for hero image container */
+  padding-top: 56.25%; /* 16:9 Aspect Ratio */
   overflow: hidden;
-  border-bottom: 5px solid #0d6efd;
 }
 
 .hero-image-container img {
@@ -28,30 +28,32 @@ h1, h2, h3, h4, h5, h6 {
   object-position: center;
 }
 
+/* Cards & Badges */
 .card {
   border-radius: 10px;
   overflow: hidden;
-  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out; /* Animasi untuk hover */
 }
 
 .card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.15); /* Efek bayangan lebih menonjol */
 }
 
 .badge {
   font-size: 0.9em;
   padding: 0.4em 0.8em;
   border-radius: 0.5rem;
-  font-weight: 600;
+  font-weight: 600; /* Lebih tebal */
 }
 
+/* Clickable Names & Descriptions (for Quick View Profiles) */
 .clickable-name {
   cursor: pointer;
   color: #0d6efd;
   text-decoration: underline;
-  transition: color 0.2s;
-  font-weight: 600;
+  transition: color 0.2s ease-in-out;
+  font-weight: 600; /* Lebih tebal */
 }
 
 .clickable-name:hover {
@@ -59,12 +61,27 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .debater-desc {
-  display: none;
+  display: none; /* Default hidden */
   color: #555;
   margin-top: 1rem;
   padding: 0.8rem;
   background-color: #e9ecef;
   border-radius: 8px;
+  opacity: 0; /* Initial state for fade-in */
+  max-height: 0; /* Initial state for slide-down */
+  overflow: hidden;
+  transition: opacity 0.4s ease-out, max-height 0.4s ease-out; /* Smooth transition */
+}
+
+.debater-desc.show { /* Class to show description */
+  display: block; /* Make it visible */
+  opacity: 1; /* Fade in */
+  max-height: 200px; /* Adjust max-height based on content to make sure it expands fully */
+}
+
+.debater-desc p {
+  margin-bottom: 0.3rem;
+  font-size: 0.95em;
 }
 
 /* Table styling for Leaderboard */
@@ -72,29 +89,27 @@ h1, h2, h3, h4, h5, h6 {
   background-color: #343a40;
   color: #fff;
   border-color: #454d55;
-  cursor: pointer; /* Indicate sortable */
-  position: relative;
-  user-select: none; /* Prevent text selection on click */
 }
 
-.table thead th .sort-icon {
-    margin-left: 5px;
-    opacity: 0.5;
-    transition: opacity 0.2s ease;
-}
-.table thead th:hover .sort-icon {
-    opacity: 1;
+.table tbody tr {
+  background-color: #fff;
 }
 
-/* Leaderboard Filters */
-.leaderboard-filters select,
-.leaderboard-filters input {
-    margin-bottom: 10px;
+.table-striped tbody tr:nth-of-type(odd) {
+  background-color: #f2f2f2;
+}
+
+.table-bordered th, .table-bordered td {
+  border-color: #dee2e6;
+}
+
+.table img {
+  vertical-align: middle;
 }
 
 /* Recent Matches Section Styles */
 .recent-matches-section {
-  background-color: #0d0d0d;
+  background-color: #0d0d0d; /* Dark background for match cards */
   padding: 50px 0;
   color: #fff;
 }
@@ -110,7 +125,7 @@ h1, h2, h3, h4, h5, h6 {
 
 .recent-matches-section .match-img-16by9 {
   width: 100%;
-  height: 200px; /* Adjusted height */
+  height: 200px;
   object-fit: cover;
   display: block;
 }
@@ -163,11 +178,11 @@ h1, h2, h3, h4, h5, h6 {
   padding: 15px;
 }
 
-.individual-match-history img.debater-thumbnail { /* Class for debater profile thumb */
+.individual-match-history img.debater-thumbnail {
   border-radius: 50%;
   margin-right: 15px;
   border: 2px solid #0d6efd;
-  width: 60px; /* Adjusted thumbnail size */
+  width: 60px;
   height: 60px;
   object-fit: cover;
 }
@@ -198,17 +213,17 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* Specific background colors for win/loss in individual history */
-.individual-match-history .card[style*="background-color: #e6ffe6;"] {
-  background-color: #e6ffe6 !important;
+.individual-match-history .card.win-card {
+  background-color: #e6ffe6; /* Lighter green for wins */
   border-color: #d4edda;
 }
 
-.individual-match-history .card[style*="background-color: #ffe6e6;"] {
-  background-color: #ffe6e6 !important;
+.individual-match-history .card.loss-card {
+  background-color: #ffe6e6; /* Lighter red for losses */
   border-color: #f5c6cb;
 }
 
-/* Debater Profile Section Styles */
+/* Debater Profile Section Styles (for index.html & profile.html) */
 .debater-profile .card {
     text-align: center;
     background-color: #ffffff;
@@ -216,13 +231,13 @@ h1, h2, h3, h4, h5, h6 {
     box-shadow: 0 2px 10px rgba(0,0,0,0.05);
 }
 
-.debater-profile .card-img-top { /* for profile display in this section only */
+.debater-profile .card-img-top.profile-avatar {
     width: 150px;
     height: 150px;
     border-radius: 50%;
     object-fit: cover;
     margin: 20px auto 10px auto;
-    border: 4px solid #0d6efd;
+    border: 4px solid #0d6efd; /* Blue border */
 }
 
 .debater-profile .profile-name {
@@ -255,49 +270,12 @@ h1, h2, h3, h4, h5, h6 {
     color: #0d6efd;
 }
 
-/* Comparison specific styles */
-.compare-section .compare-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
+.debater-profile .profile-detail p {
+    margin-bottom: 8px;
+    font-size: 1rem;
+    color: #555;
 }
 
-.compare-section .compare-avatar {
-    width: 120px;
-    height: 120px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 4px solid #0d6efd;
-    margin-bottom: 10px;
-}
-
-.compare-section .vs-text {
-    font-size: 2.5rem;
-    font-weight: bold;
-    color: #dc3545; /* Bootstrap danger color */
-    margin: 0 20px;
-    align-self: center;
-}
-
-.compare-section .metric-table {
-    width: 100%;
-    margin-top: 20px;
-}
-
-.compare-section .metric-table td {
-    padding: 8px;
-    vertical-align: middle;
-}
-
-.compare-section .metric-name {
-    font-weight: bold;
+.debater-profile .profile-detail strong {
     color: #333;
-    text-align: center;
-}
-
-.compare-section .score-badge {
-    font-size: 1em;
-    padding: 0.5em 1em;
-    width: 60px; /* Fixed width for score badge */
 }
