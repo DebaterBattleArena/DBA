@@ -50,18 +50,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
             const data = await response.json();
+            // Basic validation for debaters and matches arrays
+            if (!Array.isArray(data.debaters) || !Array.isArray(data.matches)) {
+                throw new Error("Invalid data structure: 'debaters' or 'matches' is not an array.");
+            }
             allDebatersData = data.debaters;
             allMatchesData = data.matches;
             showToast('Data loaded successfully!', 'success');
             return data;
         } catch (error) {
             console.error("Error fetching data:", error);
-            showToast('Failed to load data! Check console for details.', 'error');
+            showToast('Failed to load data! Check console for details and ensure data.json is valid.', 'error');
             setAppContent(`
                 <div class="container my-5 text-center text-danger animate__animated animate__fadeIn">
                     <i class="fas fa-exclamation-triangle fa-3x mb-3"></i>
                     <h2>Failed to load data!</h2>
-                    <p>Please check if 'data.json' exists and is valid.</p>
+                    <p>Please check if 'data.json' exists and is valid. See console for error details.</p>
                 </div>
             `);
             return null;
@@ -87,6 +91,7 @@ document.addEventListener('DOMContentLoaded', () => {
         imgElement.onerror = null; // Prevent infinite loop if fallback also fails
         imgElement.src = 'assets/default_avatar.png'; // Path to a default avatar image
         imgElement.alt = 'Default Avatar';
+        // console.warn(`Image failed to load: ${imgElement.src}, replacing with default.`); // Optional: for debugging
     };
 
     // --- Rendering Functions for various pages/sections ---
@@ -275,24 +280,43 @@ document.addEventListener('DOMContentLoaded', () => {
         let metricsHtml = '';
         const metricLabels = [];
         const metricScores = [];
-        for (const [metricName, metricScore] of Object.entries(debater.metrics)) {
-            const widthPercentage = (parseFloat(metricScore) / 10) * 100;
-            metricsHtml += `
-                <div class="profile-metric d-flex align-items-center mb-2">
-                    <span class="me-2 text-capitalize">${metricName.replace(/([A-Z])/g, ' $1').trim()}:</span>
-                    <div class="progress flex-grow-1" role="progressbar" aria-label="${metricName} score" aria-valuenow="${metricScore}" aria-valuemin="0" aria-valuemax="10">
-                        <div class="progress-bar bg-info" style="width: ${widthPercentage}%;"></div>
+        // Ensure debater.metrics exists and is an object
+        if (debater.metrics && typeof debater.metrics === 'object') {
+            for (const [metricName, metricScore] of Object.entries(debater.metrics)) {
+                const scoreValue = parseFloat(metricScore);
+                const widthPercentage = (isNaN(scoreValue) || scoreValue < 0) ? 0 : (scoreValue / 10) * 100;
+                metricsHtml += `
+                    <div class="profile-metric d-flex align-items-center mb-2">
+                        <span class="me-2 text-capitalize">${metricName.replace(/([A-Z])/g, ' $1').trim()}:</span>
+                        <div class="progress flex-grow-1" role="progressbar" aria-label="${metricName} score" aria-valuenow="${scoreValue}" aria-valuemin="0" aria-valuemax="10">
+                            <div class="progress-bar bg-info" style="width: ${widthPercentage}%;"></div>
+                        </div>
+                        <span class="metric-value ms-2">${isNaN(scoreValue) ? 'N/A' : `${scoreValue}/10`}</span>
                     </div>
-                    <span class="metric-value ms-2">${metricScore}/10</span>
-                </div>
-            `;
-            metricLabels.push(metricName.replace(/([A-Z])/g, ' $1').trim()); // Make labels more readable
-            metricScores.push(parseFloat(metricScore));
+                `;
+                if (!isNaN(scoreValue)) {
+                    metricLabels.push(metricName.replace(/([A-Z])/g, ' $1').trim());
+                    metricScores.push(scoreValue);
+                }
+            }
+        } else {
+            metricsHtml = `<p class="text-muted text-center">No metric data available for this debater.</p>`;
         }
 
-        const totalWinsLosses = debater.wins + debater.losses;
-        const winRate = totalWinsLosses > 0 ? ((debater.wins / totalWinsLosses) * 100).toFixed(2) : '0.00';
+        const totalWinsLosses = (debater.wins || 0) + (debater.losses || 0);
+        const winRate = totalWinsLosses > 0 ? (((debater.wins || 0) / totalWinsLosses) * 100).toFixed(2) : '0.00';
         const averageMetric = metricScores.length > 0 ? (metricScores.reduce((sum, score) => sum + score, 0) / metricScores.length).toFixed(2) : 'N/A';
+
+        // Provide default values for potentially missing properties
+        const debaterPhoto = debater.photo || 'assets/default_avatar.png';
+        const debaterFlag = debater.flag || '';
+        const debaterCountryCode = debater.country_code || 'XX';
+        const debaterName = debater.name || 'Unknown Debater';
+        const debaterRecord = debater.record || '0-0';
+        const debaterCountry = debater.country || 'Unknown';
+        const debaterCharacter = debater.character || 'Unknown';
+        const debaterBio = debater.bio || 'No biography available.';
+
 
         const profilePageHtml = `
             <section class="container my-5">
@@ -300,9 +324,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="col-lg-8">
                         <div class="card shadow p-4 animate__animated animate__fadeIn">
                             <div class="text-center">
-                                <img src="${debater.photo}" class="profile-avatar mb-3 animate__animated animate__zoomIn" alt="${debater.name} Profile Photo" onerror="onImageError(this)">
-                                <h2 class="profile-name animate__animated animate__fadeInDown">${debater.name} <img src="${debater.flag}" width="30" class="ms-2" alt="${debater.country_code} flag"/></h2>
-                                <p class="profile-record animate__animated animate__fadeIn">Record: <span class="badge ${debater.wins > debater.losses ? 'bg-success' : 'bg-danger'}">${debater.record}</span></p>
+                                <img src="${debaterPhoto}" class="profile-avatar mb-3 animate__animated animate__zoomIn" alt="${debaterName} Profile Photo" onerror="onImageError(this)">
+                                <h2 class="profile-name animate__animated animate__fadeInDown">${debaterName} ${debaterFlag ? `<img src="${debaterFlag}" width="30" class="ms-2" alt="${debaterCountryCode} flag"/>` : ''}</h2>
+                                <p class="profile-record animate__animated animate__fadeIn">Record: <span class="badge ${debater.wins > debater.losses ? 'bg-success' : 'bg-danger'}">${debaterRecord}</span></p>
                                 <p class="text-muted"><i class="fas fa-percentage me-1"></i> Win Rate: ${winRate}% | <i class="fas fa-gamepad me-1"></i> Total Matches: ${totalWinsLosses}</p>
                                 <p class="text-muted"><i class="fas fa-star-half-alt me-1"></i> Average Metric Score: ${averageMetric}/10</p>
                             </div>
@@ -312,16 +336,16 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <div class="row">
                                     <div class="col-md-8 mx-auto">
                                         ${metricsHtml}
-                                        <canvas id="radarChart" height="250"></canvas>
+                                        ${metricScores.length > 0 ? `<canvas id="radarChart" height="250"></canvas>` : `<p class="text-muted text-center mt-3">No data to display radar chart.</p>`}
                                     </div>
                                 </div>
                             </div>
                             <hr class="my-4">
                             <div class="profile-detail animate__animated animate__fadeInUp">
-                                <h4 class="text-center mb-3">About ${debater.name} <i class="fas fa-info-circle ms-2"></i></h4>
-                                <p><strong>Country:</strong> ${debater.country}</p>
-                                <p><strong>Favorite Character:</strong> ${debater.character}</p>
-                                <p><strong>Bio:</strong> ${debater.bio}</p>
+                                <h4 class="text-center mb-3">About ${debaterName} <i class="fas fa-info-circle ms-2"></i></h4>
+                                <p><strong>Country:</strong> ${debaterCountry}</p>
+                                <p><strong>Favorite Character:</strong> ${debaterCharacter}</p>
+                                <p><strong>Bio:</strong> ${debaterBio}</p>
                             </div>
                             <hr class="my-4">
                             <h4 class="text-center mb-3 animate__animated animate__fadeInUp">Match History <i class="fas fa-fist-raised ms-2"></i></h4>
@@ -339,7 +363,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Render Radar Chart
         const radarChartCtx = document.getElementById('radarChart');
-        if (radarChartCtx) {
+        if (radarChartCtx && metricScores.length > 0) { // Only render if there's data
             new Chart(radarChartCtx, {
                 type: 'radar',
                 data: {
@@ -405,26 +429,34 @@ document.addEventListener('DOMContentLoaded', () => {
             let matchesHtml = '';
             if (debaterMatches.length > 0) {
                 debaterMatches.forEach(match => {
+                    // Safely get debater and opponent data, with fallbacks
+                    const currentDebaterMatchData = match.debater1.id === debater.id ? match.debater1 : match.debater2;
+                    const opponentMatchData = match.debater1.id === debater.id ? match.debater2 : match.debater1;
+
+                    const opponentFullData = debaters.find(d => d.id === opponentMatchData.id);
+
                     const isWinner = match.winner === debater.name;
-                    const opponent = match.debater1.id === debater.id ? match.debater2 : match.debater1;
                     const statusBadgeClass = isWinner ? 'bg-success' : 'bg-danger';
                     const statusText = isWinner ? 'WIN' : 'LOSS';
                     const cardBackgroundClass = isWinner ? 'win-card' : 'loss-card';
 
-                    const opponentDebater = debaters.find(d => d.id === opponent.id);
-                    const opponentPhoto = opponentDebater ? opponentDebater.photo : 'assets/default_avatar.png';
+                    const opponentPhoto = opponentFullData ? opponentFullData.photo : 'assets/default_avatar.png';
+                    const opponentName = opponentFullData ? opponentFullData.name : 'Unknown Opponent';
+                    const debaterCharacterDisplay = currentDebaterMatchData.character || debater.character || 'Unknown';
+                    const opponentCharacterDisplay = opponentMatchData.character || (opponentFullData ? opponentFullData.character : 'Unknown');
+
                     const matchDate = match.date ? new Date(match.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'Unknown Date';
 
                     matchesHtml += `
                         <div class="col-12">
                             <div class="card shadow p-3 mb-2 d-flex flex-row align-items-center ${cardBackgroundClass} animate__animated animate__fadeIn">
-                                <img src="${debater.photo}" width="50" height="50" class="rounded-circle me-3 object-fit-cover" alt="${debater.name}" onerror="onImageError(this)">
+                                <img src="${debaterPhoto}" width="50" height="50" class="rounded-circle me-3 object-fit-cover" alt="${debaterName}" onerror="onImageError(this)">
                                 <div class="flex-grow-1">
-                                    <h6 class="mb-1 fw-bold">${debater.name} <span class="badge ${statusBadgeClass}">${statusText}</span> vs <a href="#profile/${opponent.id}" class="text-decoration-none">${opponent.name}</a></h6>
-                                    <small class="text-muted">Method: ${match.method} - Character: ${debater.character} vs ${opponent.character}</small><br>
+                                    <h6 class="mb-1 fw-bold">${debaterName} <span class="badge ${statusBadgeClass}">${statusText}</span> vs <a href="#profile/${opponentMatchData.id}" class="text-decoration-none">${opponentName}</a></h6>
+                                    <small class="text-muted">Method: ${match.method || 'N/A'} - Character: ${debaterCharacterDisplay} vs ${opponentCharacterDisplay}</small><br>
                                     <small class="text-muted"><i class="fas fa-calendar-alt me-1"></i> Date: ${matchDate} ${match.event ? `(Event: ${match.event})` : ''}</small>
                                 </div>
-                                <img src="${opponentPhoto}" width="50" height="50" class="rounded-circle ms-3 object-fit-cover" alt="${opponent.name}" onerror="onImageError(this)">
+                                <img src="${opponentPhoto}" width="50" height="50" class="rounded-circle ms-3 object-fit-cover" alt="${opponentName}" onerror="onImageError(this)">
                             </div>
                         </div>
                     `;
@@ -485,11 +517,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Sort debaters by win rate, then by total matches (descending)
         const sortedDebaters = [...debaters].sort((a, b) => {
-            const totalMatchesA = (a.wins + a.losses);
-            const totalMatchesB = (b.wins + b.losses);
+            const totalMatchesA = (a.wins || 0) + (a.losses || 0);
+            const totalMatchesB = (b.wins || 0) + (b.losses || 0);
 
-            const winRateA = totalMatchesA > 0 ? a.wins / totalMatchesA : 0;
-            const winRateB = totalMatchesB > 0 ? b.wins / totalMatchesB : 0;
+            const winRateA = totalMatchesA > 0 ? (a.wins || 0) / totalMatchesA : 0;
+            const winRateB = totalMatchesB > 0 ? (b.wins || 0) / totalMatchesB : 0;
 
             if (winRateA !== winRateB) return winRateB - winRateA; // Sort by win rate descending
             return totalMatchesB - totalMatchesA; // Then by total matches descending
@@ -497,18 +529,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const top3 = sortedDebaters.slice(0, 3);
         // Ensure low3 are distinct from top3 and truly represent the lowest performers
-        const low3Candidates = [...sortedDebaters].sort((a, b) => {
-            const totalMatchesA = (a.wins + a.losses);
-            const totalMatchesB = (b.wins + b.losses);
+        // Filter out debaters with 0 total matches from the low record calculation unless explicitly desired
+        const low3Candidates = [...debaters]
+            .filter(d => ((d.wins || 0) + (d.losses || 0)) > 0 && !top3.some(t => t.id === d.id)) // Ensure some matches and not already in top3
+            .sort((a, b) => {
+                const totalMatchesA = (a.wins || 0) + (a.losses || 0);
+                const totalMatchesB = (b.wins || 0) + (b.losses || 0);
 
-            const winRateA = totalMatchesA > 0 ? a.wins / totalMatchesA : 0;
-            const winRateB = totalMatchesB > 0 ? b.wins / totalMatchesB : 0;
+                const winRateA = totalMatchesA > 0 ? (a.wins || 0) / totalMatchesA : 0;
+                const winRateB = totalMatchesB > 0 ? (b.wins || 0) / totalMatchesB : 0;
 
-            if (winRateA !== winRateB) return winRateA - winRateB; // Sort by win rate ascending
-            return totalMatchesA - totalMatchesB; // Then by total matches ascending
-        });
+                if (winRateA !== winRateB) return winRateA - winRateB; // Sort by win rate ascending
+                return totalMatchesA - totalMatchesB; // Then by total matches ascending
+            });
 
-        const low3 = low3Candidates.filter(d => !top3.some(t => t.id === d.id)).slice(0, 3);
+        const low3 = low3Candidates.slice(0, 3);
 
         let html = `
             <div class="col-md-6">
@@ -516,13 +551,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="row g-3">
         `;
         top3.forEach(debater => {
+            const debaterPhoto = debater.photo || 'assets/default_avatar.png';
+            const debaterFlag = debater.flag || '';
+            const debaterCountryCode = debater.country_code || 'XX';
+            const debaterName = debater.name || 'Unknown';
+            const debaterRecord = debater.record || '0-0';
+            const recordClass = (debater.wins || 0) > (debater.losses || 0) ? 'bg-success' : 'bg-danger';
+
             html += `
                 <div class="col-md-4">
-                    <div class="card shadow h-100 animate__animated animate__fadeInUp card-hover-effect" role="button" aria-label="View ${debater.name}'s profile" onclick="window.location.hash='#profile/${debater.id}'">
-                        <img src="${debater.photo}" class="card-img-top card-img-fixed-height" alt="${debater.name} photo" loading="lazy" onerror="onImageError(this)"/>
+                    <div class="card shadow h-100 animate__animated animate__fadeInUp card-hover-effect" role="button" aria-label="View ${debaterName}'s profile" onclick="window.location.hash='#profile/${debater.id}'">
+                        <img src="${debaterPhoto}" class="card-img-top card-img-fixed-height" alt="${debaterName} photo" loading="lazy" onerror="onImageError(this)"/>
                         <div class="card-body">
-                            <h4 class="card-title">${debater.name} <img src="${debater.flag}" width="24" class="ms-2" alt="${debater.country_code} flag"/></h4>
-                            <p class="card-text">Record: <span class="badge ${debater.wins > debater.losses ? 'bg-success' : 'bg-danger'}">${debater.record}</span></p>
+                            <h4 class="card-title">${debaterName} ${debaterFlag ? `<img src="${debaterFlag}" width="24" class="ms-2" alt="${debaterCountryCode} flag"/>` : ''}</h4>
+                            <p class="card-text">Record: <span class="badge ${recordClass}">${debaterRecord}</span></p>
                         </div>
                     </div>
                 </div>
@@ -536,13 +578,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="row g-3">
         `;
         low3.forEach(debater => {
+            const debaterPhoto = debater.photo || 'assets/default_avatar.png';
+            const debaterFlag = debater.flag || '';
+            const debaterCountryCode = debater.country_code || 'XX';
+            const debaterName = debater.name || 'Unknown';
+            const debaterRecord = debater.record || '0-0';
+            const recordClass = (debater.wins || 0) > (debater.losses || 0) ? 'bg-success' : 'bg-danger';
             html += `
                 <div class="col-md-4">
-                    <div class="card shadow h-100 animate__animated animate__fadeInUp card-hover-effect" role="button" aria-label="View ${debater.name}'s profile" onclick="window.location.hash='#profile/${debater.id}'">
-                        <img src="${debater.photo}" class="card-img-top card-img-fixed-height" alt="${debater.name} photo" loading="lazy" onerror="onImageError(this)"/>
+                    <div class="card shadow h-100 animate__animated animate__fadeInUp card-hover-effect" role="button" aria-label="View ${debaterName}'s profile" onclick="window.location.hash='#profile/${debater.id}'">
+                        <img src="${debaterPhoto}" class="card-img-top card-img-fixed-height" alt="${debaterName} photo" loading="lazy" onerror="onImageError(this)"/>
                         <div class="card-body">
-                            <h4 class="card-title">${debater.name} <img src="${debater.flag}" width="24" class="ms-2" alt="${debater.country_code} flag"/></h4>
-                            <p class="card-text">Record: <span class="badge ${debater.wins > debater.losses ? 'bg-success' : 'bg-danger'}">${debater.record}</span></p>
+                            <h4 class="card-title">${debaterName} ${debaterFlag ? `<img src="${debaterFlag}" width="24" class="ms-2" alt="${debaterCountryCode} flag"/>` : ''}</h4>
+                            <p class="card-text">Record: <span class="badge ${recordClass}">${debaterRecord}</span></p>
                         </div>
                     </div>
                 </div>
@@ -566,18 +614,27 @@ document.addEventListener('DOMContentLoaded', () => {
         let html = '';
         // Display a representative sample, e.g., the first 3
         debaters.slice(0, 3).forEach(debater => {
+            const debaterPhoto = debater.photo || 'assets/default_avatar.png';
+            const debaterFlag = debater.flag || '';
+            const debaterCountryCode = debater.country_code || 'XX';
+            const debaterName = debater.name || 'Unknown';
+            const debaterRecord = debater.record || '0-0';
+            const recordClass = (debater.wins || 0) > (debater.losses || 0) ? 'bg-success' : 'bg-danger';
+            const debaterCharacter = debater.character || 'Unknown';
+            const debaterSummary = debater.summary || 'No summary available.';
+
             html += `
                 <div class="col-md-4">
-                    <div class="card shadow h-100 text-center animate__animated animate__fadeInUp card-hover-effect" aria-label="Quick summary for ${debater.name}">
-                        <img src="${debater.photo}" class="card-img-top card-img-fixed-height" alt="${debater.name} photo" loading="lazy" onerror="onImageError(this)"/>
+                    <div class="card shadow h-100 text-center animate__animated animate__fadeInUp card-hover-effect" aria-label="Quick summary for ${debaterName}">
+                        <img src="${debaterPhoto}" class="card-img-top card-img-fixed-height" alt="${debaterName} photo" loading="lazy" onerror="onImageError(this)"/>
                         <div class="card-body">
                             <h3 class="clickable-name" data-debater-id="${debater.id}" tabindex="0" role="button" aria-expanded="false" aria-controls="${debater.id}-desc">
-                                ${debater.name} <img src="${debater.flag}" width="24" class="ms-2" alt="${debater.country_code} flag"/>
+                                ${debaterName} ${debaterFlag ? `<img src="${debaterFlag}" width="24" class="ms-2" alt="${debaterCountryCode} flag"/>` : ''}
                             </h3>
-                            <p class="card-text">Record: <span class="badge ${debater.wins > debater.losses ? 'bg-success' : 'bg-danger'}">${debater.record}</span></p>
+                            <p class="card-text">Record: <span class="badge ${recordClass}">${debaterRecord}</span></p>
                             <div id="${debater.id}-desc" class="debater-desc collapse">
-                                <p><strong>Character:</strong> ${debater.character}</p>
-                                <p><strong>Summary:</strong> ${debater.summary}</p>
+                                <p><strong>Character:</strong> ${debaterCharacter}</p>
+                                <p><strong>Summary:</strong> ${debaterSummary}</p>
                             </div>
                             <a href="#profile/${debater.id}" class="btn btn-sm btn-outline-primary mt-2">View Profile</a>
                         </div>
@@ -623,33 +680,46 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!detailedProfilesSection) return;
 
         const filteredDebaters = debaters.filter(debater =>
-            debater.name.toLowerCase().includes(searchTerm.toLowerCase())
+            (debater.name || '').toLowerCase().includes(searchTerm.toLowerCase())
         );
 
         let html = '';
         if (filteredDebaters.length > 0) {
             filteredDebaters.forEach(debater => {
                 let metricsHtml = '';
-                for (const [metricName, metricScore] of Object.entries(debater.metrics)) {
-                    const widthPercentage = (parseFloat(metricScore) / 10) * 100;
-                    metricsHtml += `
-                        <div class="profile-metric d-flex align-items-center mb-1">
-                            <span class="me-2 text-capitalize">${metricName.replace(/([A-Z])/g, ' $1').trim()}:</span>
-                            <div class="progress flex-grow-1" role="progressbar" aria-label="${metricName} score" aria-valuenow="${metricScore}" aria-valuemin="0" aria-valuemax="10">
-                                <div class="progress-bar bg-info" style="width: ${widthPercentage}%;"></div>
+                // Ensure debater.metrics exists and is an object
+                if (debater.metrics && typeof debater.metrics === 'object') {
+                    for (const [metricName, metricScore] of Object.entries(debater.metrics)) {
+                        const scoreValue = parseFloat(metricScore);
+                        const widthPercentage = (isNaN(scoreValue) || scoreValue < 0) ? 0 : (scoreValue / 10) * 100;
+                        metricsHtml += `
+                            <div class="profile-metric d-flex align-items-center mb-1">
+                                <span class="me-2 text-capitalize">${metricName.replace(/([A-Z])/g, ' $1').trim()}:</span>
+                                <div class="progress flex-grow-1" role="progressbar" aria-label="${metricName} score" aria-valuenow="${scoreValue}" aria-valuemin="0" aria-valuemax="10">
+                                    <div class="progress-bar bg-info" style="width: ${widthPercentage}%;"></div>
+                                </div>
+                                <span class="metric-value ms-2">${isNaN(scoreValue) ? 'N/A' : `${scoreValue}/10`}</span>
                             </div>
-                            <span class="metric-value ms-2">${metricScore}/10</span>
-                        </div>
-                    `;
+                        `;
+                    }
+                } else {
+                    metricsHtml = `<p class="text-muted text-center">No metric data available.</p>`;
                 }
+
+                const debaterPhoto = debater.photo || 'assets/default_avatar.png';
+                const debaterFlag = debater.flag || '';
+                const debaterCountryCode = debater.country_code || 'XX';
+                const debaterName = debater.name || 'Unknown';
+                const debaterRecord = debater.record || '0-0';
+                const recordClass = (debater.wins || 0) > (debater.losses || 0) ? 'bg-success' : 'bg-danger';
 
                 html += `
                     <div class="col-md-6 col-lg-4 animate__animated animate__fadeInUp">
                         <div class="card shadow h-100 debater-profile-card card-hover-effect">
-                            <img src="${debater.photo}" class="card-img-top debater-profile-img" alt="${debater.name} Profile Photo" loading="lazy" onerror="onImageError(this)">
+                            <img src="${debaterPhoto}" class="card-img-top debater-profile-img" alt="${debaterName} Profile Photo" loading="lazy" onerror="onImageError(this)">
                             <div class="card-body text-center">
-                                <h4 class="card-title">${debater.name} <img src="${debater.flag}" width="24" class="ms-2" alt="${debater.country_code} flag"/></h4>
-                                <p class="card-text">Record: <span class="badge ${debater.wins > debater.losses ? 'bg-success' : 'bg-danger'}">${debater.record}</span></p>
+                                <h4 class="card-title">${debaterName} ${debaterFlag ? `<img src="${debaterFlag}" width="24" class="ms-2" alt="${debaterCountryCode} flag"/>` : ''}</h4>
+                                <p class="card-text">Record: <span class="badge ${recordClass}">${debaterRecord}</span></p>
                                 <div class="mt-3 text-start">
                                     ${metricsHtml}
                                 </div>
@@ -687,7 +757,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const countryFilter = document.getElementById('countryFilter')?.value || '';
 
         let filteredDebaters = debaters.filter(debater => {
-            const matchesSearch = debater.name.toLowerCase().includes(searchTerm);
+            const matchesSearch = (debater.name || '').toLowerCase().includes(searchTerm);
             const matchesTier = tierFilter === '' || debater.tier === tierFilter;
             const matchesCountry = countryFilter === '' || debater.country === countryFilter;
             return matchesSearch && matchesTier && matchesCountry;
@@ -703,20 +773,20 @@ document.addEventListener('DOMContentLoaded', () => {
             switch (sortColumn) {
                 case 'rank': // This would require pre-calculating ranks based on filtered data if rank isn't a direct property
                     // For now, let's sort by wins as a proxy for rank if 'rank' isn't explicitly calculated.
-                    valA = a.wins;
-                    valB = b.wins;
+                    valA = a.wins || 0;
+                    valB = b.wins || 0;
                     break;
                 case 'name':
-                    valA = a.name.toLowerCase();
-                    valB = b.name.toLowerCase();
+                    valA = (a.name || '').toLowerCase();
+                    valB = (b.name || '').toLowerCase();
                     break;
                 case 'country':
-                    valA = a.country.toLowerCase();
-                    valB = b.country.toLowerCase();
+                    valA = (a.country || '').toLowerCase();
+                    valB = (b.country || '').toLowerCase();
                     break;
                 case 'wins':
-                    valA = a.wins;
-                    valB = b.wins;
+                    valA = a.wins || 0;
+                    valB = b.wins || 0;
                     break;
                 default:
                     valA = a.id; // Fallback to ID
@@ -742,9 +812,19 @@ document.addEventListener('DOMContentLoaded', () => {
             let rankDisplay = '';
 
             // Calculate win rate for record display
-            const totalMatches = debater.wins + debater.losses;
-            const winRate = totalMatches > 0 ? ((debater.wins / totalMatches) * 100).toFixed(0) : '0';
-            const recordText = `${debater.wins}-${debater.losses} (${winRate}%)`;
+            const debaterWins = debater.wins || 0;
+            const debaterLosses = debater.losses || 0;
+            const totalMatches = debaterWins + debaterLosses;
+            const winRate = totalMatches > 0 ? ((debaterWins / totalMatches) * 100).toFixed(0) : '0';
+            const recordText = `${debaterWins}-${debaterLosses} (${winRate}%)`;
+            const recordClass = debaterWins > debaterLosses ? 'bg-success' : 'bg-danger';
+
+            const debaterPhoto = debater.photo || 'assets/default_avatar.png';
+            const debaterFlag = debater.flag || '';
+            const debaterCountryCode = debater.country_code || 'XX';
+            const debaterName = debater.name || 'Unknown';
+            const debaterCountry = debater.country || 'Unknown';
+
 
             switch (debater.tier) {
                 case 'High Tier':
@@ -757,15 +837,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     rankDisplay = lowTierRank++;
                     break;
                 default:
-                    rankDisplay = '-';
+                    rankDisplay = '-'; // If tier is missing or invalid
             }
 
             row.innerHTML = `
                 <td>${rankDisplay}</td>
-                <td><img src="${debater.photo}" width="50" height="50" class="rounded-circle object-fit-cover leaderboard-avatar" alt="${debater.name}" onerror="onImageError(this)"></td>
-                <td><a href="#profile/${debater.id}" class="text-decoration-none">${debater.name}</a></td>
-                <td><img src="${debater.flag}" width="24" class="me-2" alt="${debater.country_code} flag"/> ${debater.country}</td>
-                <td><span class="badge ${debater.wins > debater.losses ? 'bg-success' : 'bg-danger'}">${recordText}</span></td>
+                <td><img src="${debaterPhoto}" width="50" height="50" class="rounded-circle object-fit-cover leaderboard-avatar" alt="${debaterName}" onerror="onImageError(this)"></td>
+                <td><a href="#profile/${debater.id}" class="text-decoration-none">${debaterName}</a></td>
+                <td>${debaterFlag ? `<img src="${debaterFlag}" width="24" class="me-2" alt="${debaterCountryCode} flag"/>` : ''} ${debaterCountry}</td>
+                <td><span class="badge ${recordClass}">${recordText}</span></td>
             `;
 
             if (debater.tier === 'High Tier') {
@@ -814,9 +894,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const tierCounts = debaters.reduce((acc, debater) => {
-            acc[debater.tier] = (acc[debater.tier] || 0) + 1;
+            const tier = debater.tier || 'Unknown Tier'; // Handle missing tier
+            acc[tier] = (acc[tier] || 0) + 1;
             return acc;
-        }, { 'High Tier': 0, 'Mid Tier': 0, 'Low Tier': 0 }); // Initialize to ensure all tiers appear
+        }, { 'High Tier': 0, 'Mid Tier': 0, 'Low Tier': 0 }); // Initialize to ensure all primary tiers appear
 
         const labels = Object.keys(tierCounts);
         const data = Object.values(tierCounts);
@@ -831,12 +912,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     backgroundColor: [
                         'rgba(255, 193, 7, 0.7)',  // Warning (Yellow)
                         'rgba(108, 117, 125, 0.7)', // Secondary (Grey)
-                        'rgba(33, 37, 41, 0.7)'    // Dark (Black)
+                        'rgba(33, 37, 41, 0.7)',    // Dark (Black)
+                        'rgba(200, 200, 200, 0.7)' // For 'Unknown Tier'
                     ],
                     borderColor: [
                         'rgba(255, 193, 7, 1)',
                         'rgba(108, 117, 125, 1)',
-                        'rgba(33, 37, 41, 1)'
+                        'rgba(33, 37, 41, 1)',
+                        'rgba(200, 200, 200, 1)'
                     ],
                     borderWidth: 1
                 }]
@@ -908,45 +991,60 @@ document.addEventListener('DOMContentLoaded', () => {
         let html = '';
         if (sortedMatches.length > 0) {
             sortedMatches.forEach(match => {
-                const debater1 = allDebatersData.find(d => d.id === match.debater1.id) || match.debater1;
-                const debater2 = allDebatersData.find(d => d.id === match.debater2.id) || match.debater2;
+                // Safely get debater data, with fallback to match data if not found in allDebatersData
+                const debater1FullData = allDebatersData.find(d => d.id === match.debater1.id);
+                const debater2FullData = allDebatersData.find(d => d.id === match.debater2.id);
 
-                const winnerName = match.winner;
-                const winnerBadgeClass = winnerName === debater1.name ? 'bg-primary' : 'bg-danger'; // Assuming primary for D1, danger for D2 winner
-                const winnerPhoto = winnerName === debater1.name ? debater1.photo : debater2.photo;
+                // Use data from allDebatersData if available, otherwise fallback to match data (which might be less complete)
+                const debater1 = debater1FullData || match.debater1;
+                const debater2 = debater2FullData || match.debater2;
+
+                // Provide default values for potentially missing properties
+                const debater1Photo = debater1.photo || 'assets/default_avatar.png';
+                const debater2Photo = debater2.photo || 'assets/default_avatar.png';
+                const debater1Name = debater1.name || 'Unknown Debater 1';
+                const debater2Name = debater2.name || 'Unknown Debater 2';
+                const debater1Character = debater1.character || 'Unknown';
+                const debater2Character = debater2.character || 'Unknown';
+
+                const winnerName = match.winner || 'N/A'; // Handle missing winner
+                const winnerBadgeClass = winnerName === debater1Name ? 'bg-primary' : 'bg-danger'; // Assuming primary for D1, danger for D2 winner
+                // No need for winnerPhoto if we use debater1Photo/debater2Photo
 
                 const matchDate = match.date ? new Date(match.date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : 'N/A';
+                const matchMethod = match.method || 'N/A';
+                const matchEvent = match.event || '';
 
                 html += `
                     <div class="col-md-6 col-lg-4">
                         <div class="card shadow match-card h-100 animate__animated animate__fadeInUp">
                             <div class="card-header text-center bg-primary text-white">
-                                <h5 class="mb-0">Match ID: ${match.id}</h5>
+                                <h5 class="mb-0">Match ID: ${match.id || 'N/A'}</h5>
                             </div>
                             <div class="card-body text-center">
                                 <div class="d-flex justify-content-around align-items-center mb-3">
                                     <div class="debater-info">
                                         <a href="#profile/${debater1.id}" class="text-decoration-none text-dark">
-                                            <img src="${debater1.photo}" class="rounded-circle match-avatar" alt="${debater1.name}" onerror="onImageError(this)">
-                                            <p class="mb-0 fw-bold">${debater1.name}</p>
+                                            <img src="${debater1Photo}" class="rounded-circle match-avatar" alt="${debater1Name}" onerror="onImageError(this)">
+                                            <p class="mb-0 fw-bold">${debater1Name}</p>
                                         </a>
-                                        <small class="text-muted">${debater1.character}</small>
+                                        <small class="text-muted">${debater1Character}</small>
                                     </div>
                                     <span class="vs-text fw-bold mx-2">VS</span>
                                     <div class="debater-info">
                                         <a href="#profile/${debater2.id}" class="text-decoration-none text-dark">
-                                            <img src="${debater2.photo}" class="rounded-circle match-avatar" alt="${debater2.name}" onerror="onImageError(this)">
-                                            <p class="mb-0 fw-bold">${debater2.name}</p>
+                                            <img src="${debater2Photo}" class="rounded-circle match-avatar" alt="${debater2Name}" onerror="onImageError(this)">
+                                            <p class="mb-0 fw-bold">${debater2Name}</p>
                                         </a>
-                                        <small class="text-muted">${debater2.character}</small>
+                                        <small class="text-muted">${debater2Character}</small>
                                     </div>
                                 </div>
                                 <p class="card-text mb-1">
                                     <i class="fas fa-trophy me-1"></i> Winner: <span class="badge ${winnerBadgeClass}">${winnerName}</span>
                                 </p>
-                                <p class="card-text mb-1"><i class="fas fa-gavel me-1"></i> Method: ${match.method}</p>
+                                <p class="card-text mb-1"><i class="fas fa-gavel me-1"></i> Method: ${matchMethod}</p>
                                 <p class="card-text"><i class="fas fa-calendar-alt me-1"></i> Date: ${matchDate}</p>
-                                ${match.event ? `<p class="card-text"><i class="fas fa-calendar-check me-1"></i> Event: ${match.event}</p>` : ''}
+                                ${matchEvent ? `<p class="card-text"><i class="fas fa-calendar-check me-1"></i> Event: ${matchEvent}</p>` : ''}
                             </div>
                         </div>
                     </div>
@@ -973,7 +1071,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         let html = '';
         // Display a few latest matches for 3-5 random debaters for demonstration
-        const debatersToShow = debaters.sort(() => 0.5 - Math.random()).slice(0, 5); // Pick 5 random debaters
+        // Filter out debaters without an 'id' before shuffling/slicing
+        const validDebaters = debaters.filter(d => d.id);
+        const debatersToShow = validDebaters.sort(() => 0.5 - Math.random()).slice(0, 5); // Pick 5 random debaters
 
         if (debatersToShow.length === 0) {
             individualMatchHistorySection.innerHTML = `<div class="col-12 text-center text-muted"><p>No debaters to display match history for.</p></div>`;
@@ -981,6 +1081,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         debatersToShow.forEach(debater => {
+            // Ensure debater has an ID before filtering matches
+            if (!debater.id) return;
+
             const debaterMatches = matches.filter(match =>
                 match.debater1.id === debater.id || match.debater2.id === debater.id
             ).sort((a, b) => {
@@ -990,30 +1093,40 @@ document.addEventListener('DOMContentLoaded', () => {
             }).slice(0, 2); // Show only the 2 latest matches per debater
 
             if (debaterMatches.length > 0) {
+                const debaterPhoto = debater.photo || 'assets/default_avatar.png';
+                const debaterName = debater.name || 'Unknown Debater';
+
                 html += `
                     <div class="col-md-6 col-lg-4">
                         <div class="card shadow h-100 animate__animated animate__fadeInUp">
                             <div class="card-header bg-dark text-white d-flex align-items-center">
-                                <img src="${debater.photo}" width="40" height="40" class="rounded-circle me-2 object-fit-cover" alt="${debater.name}" onerror="onImageError(this)">
-                                <h5 class="mb-0 flex-grow-1">${debater.name}'s Latest Matches</h5>
+                                <img src="${debaterPhoto}" width="40" height="40" class="rounded-circle me-2 object-fit-cover" alt="${debaterName}" onerror="onImageError(this)">
+                                <h5 class="mb-0 flex-grow-1">${debaterName}'s Latest Matches</h5>
                                 <a href="#profile/${debater.id}" class="btn btn-sm btn-outline-light ms-auto">View All</a>
                             </div>
                             <ul class="list-group list-group-flush">
                 `;
                 debaterMatches.forEach(match => {
+                    // Safely get opponent data for this specific match
+                    const opponentMatchData = match.debater1.id === debater.id ? match.debater2 : match.debater1;
+                    const opponentFullData = allDebatersData.find(d => d.id === opponentMatchData.id);
+
                     const isWinner = match.winner === debater.name;
-                    const opponent = match.debater1.id === debater.id ? match.debater2 : match.debater1;
                     const statusBadgeClass = isWinner ? 'bg-success' : 'bg-danger';
                     const statusText = isWinner ? 'WIN' : 'LOSS';
                     const matchDate = match.date ? new Date(match.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'N/A';
 
+                    const opponentName = (opponentFullData ? opponentFullData.name : opponentMatchData.name) || 'Unknown Opponent';
+                    const opponentPhoto = (opponentFullData ? opponentFullData.photo : 'assets/default_avatar.png') || 'assets/default_avatar.png';
+                    const matchMethod = match.method || 'N/A';
+
                     html += `
                         <li class="list-group-item d-flex justify-content-between align-items-center">
                             <div>
-                                <span class="badge ${statusBadgeClass}">${statusText}</span> vs <a href="#profile/${opponent.id}" class="text-decoration-none">${opponent.name}</a>
-                                <br><small class="text-muted">${match.method} - ${matchDate}</small>
+                                <span class="badge ${statusBadgeClass}">${statusText}</span> vs <a href="#profile/${opponentMatchData.id}" class="text-decoration-none">${opponentName}</a>
+                                <br><small class="text-muted">${matchMethod} - ${matchDate}</small>
                             </div>
-                            <img src="${(allDebatersData.find(d => d.id === opponent.id) || {}).photo || 'assets/default_avatar.png'}" width="30" height="30" class="rounded-circle object-fit-cover" alt="${opponent.name}" onerror="onImageError(this)">
+                            <img src="${opponentPhoto}" width="30" height="30" class="rounded-circle object-fit-cover" alt="${opponentName}" onerror="onImageError(this)">
                         </li>
                     `;
                 });
@@ -1119,10 +1232,10 @@ document.addEventListener('DOMContentLoaded', () => {
             comparisonChartInstance = null;
         }
 
-        if (!id1 || !id2) {
+        if (!id1 || !id2 || id1 === id2) { // Added id1 === id2 check
             comparisonResults.innerHTML = `
                 <div class="col-12 text-center text-muted">
-                    <p><i class="fas fa-info-circle me-2"></i> Select two debaters above to compare their profiles.</p>
+                    <p><i class="fas fa-info-circle me-2"></i> Select two <strong>different</strong> debaters above to compare their profiles.</p>
                 </div>
             `;
             return;
@@ -1134,69 +1247,91 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!debater1 || !debater2) {
             comparisonResults.innerHTML = `
                 <div class="col-12 text-center text-danger">
-                    <p><i class="fas fa-exclamation-triangle me-2"></i> One or both selected debaters not found.</p>
+                    <p><i class="fas fa-exclamation-triangle me-2"></i> One or both selected debaters not found in data.</p>
                 </div>
             `;
             return;
         }
 
-        const metrics1 = debater1.metrics;
-        const metrics2 = debater2.metrics;
+        // Safely access metrics, provide empty object if missing
+        const metrics1 = debater1.metrics && typeof debater1.metrics === 'object' ? debater1.metrics : {};
+        const metrics2 = debater2.metrics && typeof debater2.metrics === 'object' ? debater2.metrics : {};
 
-        const labels = Object.keys(metrics1); // Assuming both have same metric keys
-        const data1 = Object.values(metrics1).map(Number);
-        const data2 = Object.values(metrics2).map(Number);
+        // Use all unique metric labels to ensure all metrics are displayed if one debater has more
+        const allMetricLabels = [...new Set([...Object.keys(metrics1), ...Object.keys(metrics2)])];
+        const labels = allMetricLabels;
 
-        // Calculate Win Rates and Total Matches
-        const totalMatches1 = debater1.wins + debater1.losses;
-        const winRate1 = totalMatches1 > 0 ? ((debater1.wins / totalMatches1) * 100).toFixed(2) : '0.00';
-        const totalMatches2 = debater2.wins + debater2.losses;
-        const winRate2 = totalMatches2 > 0 ? ((debater2.wins / totalMatches2) * 100).toFixed(2) : '0.00';
+        // Ensure data is numeric, use 0 if missing
+        const data1 = labels.map(label => parseFloat(metrics1[label]) || 0);
+        const data2 = labels.map(label => parseFloat(metrics2[label]) || 0);
+
+        // Calculate Win Rates and Total Matches, with fallbacks for missing properties
+        const totalMatches1 = (debater1.wins || 0) + (debater1.losses || 0);
+        const winRate1 = totalMatches1 > 0 ? (((debater1.wins || 0) / totalMatches1) * 100).toFixed(2) : '0.00';
+        const totalMatches2 = (debater2.wins || 0) + (debater2.losses || 0);
+        const winRate2 = totalMatches2 > 0 ? (((debater2.wins || 0) / totalMatches2) * 100).toFixed(2) : '0.00';
+
+        // Provide default values for potentially missing properties for display
+        const debater1Photo = debater1.photo || 'assets/default_avatar.png';
+        const debater2Photo = debater2.photo || 'assets/default_avatar.png';
+        const debater1Name = debater1.name || 'Unknown Debater';
+        const debater2Name = debater2.name || 'Unknown Debater';
+        const debater1Flag = debater1.flag || '';
+        const debater2Flag = debater2.flag || '';
+        const debater1CountryCode = debater1.country_code || 'XX';
+        const debater2CountryCode = debater2.country_code || 'XX';
+        const debater1Record = debater1.record || '0-0';
+        const debater2Record = debater2.record || '0-0';
+        const debater1Character = debater1.character || 'N/A';
+        const debater2Character = debater2.character || 'N/A';
+        const recordClass1 = (debater1.wins || 0) > (debater1.losses || 0) ? 'bg-success' : 'bg-danger';
+        const recordClass2 = (debater2.wins || 0) > (debater2.losses || 0) ? 'bg-success' : 'bg-danger';
+
 
         const compareHtml = `
             <div class="col-md-6 text-center animate__animated animate__fadeInLeft">
                 <div class="card shadow p-3 h-100">
-                    <img src="${debater1.photo}" class="compare-avatar mb-3" alt="${debater1.name}" onerror="onImageError(this)">
-                    <h5>${debater1.name} <img src="${debater1.flag}" width="24" class="ms-2" alt="${debater1.country_code} flag"/></h5>
-                    <p>Record: <span class="badge ${debater1.wins > debater1.losses ? 'bg-success' : 'bg-danger'}">${debater1.record}</span></p>
+                    <img src="${debater1Photo}" class="compare-avatar mb-3" alt="${debater1Name}" onerror="onImageError(this)">
+                    <h5>${debater1Name} ${debater1Flag ? `<img src="${debater1Flag}" width="24" class="ms-2" alt="${debater1CountryCode} flag"/>` : ''}</h5>
+                    <p>Record: <span class="badge ${recordClass1}">${debater1Record}</span></p>
                     <p>Win Rate: ${winRate1}% | Total Matches: ${totalMatches1}</p>
-                    <p>Character: ${debater1.character}</p>
+                    <p>Character: ${debater1Character}</p>
                 </div>
             </div>
             <div class="col-md-6 text-center animate__animated animate__fadeInRight">
                 <div class="card shadow p-3 h-100">
-                    <img src="${debater2.photo}" class="compare-avatar mb-3" alt="${debater2.name}" onerror="onImageError(this)">
-                    <h5>${debater2.name} <img src="${debater2.flag}" width="24" class="ms-2" alt="${debater2.country_code} flag"/></h5>
-                    <p>Record: <span class="badge ${debater2.wins > debater2.losses ? 'bg-success' : 'bg-danger'}">${debater2.record}</span></p>
+                    <img src="${debater2Photo}" class="compare-avatar mb-3" alt="${debater2Name}" onerror="onImageError(this)">
+                    <h5>${debater2Name} ${debater2Flag ? `<img src="${debater2Flag}" width="24" class="ms-2" alt="${debater2CountryCode} flag"/>` : ''}</h5>
+                    <p>Record: <span class="badge ${recordClass2}">${debater2Record}</span></p>
                     <p>Win Rate: ${winRate2}% | Total Matches: ${totalMatches2}</p>
-                    <p>Character: ${debater2.character}</p>
+                    <p>Character: ${debater2Character}</p>
                 </div>
             </div>
             <div class="col-12 mt-4 animate__animated animate__fadeInUp">
                 <div class="card shadow p-4">
                     <h4 class="text-center mb-3">Metric Comparison</h4>
-                    <canvas id="comparisonChart" height="300"></canvas>
+                    ${labels.length > 0 ? `<canvas id="comparisonChart" height="300"></canvas>` : `<p class="text-muted text-center">No comparable metric data available.</p>`}
                 </div>
             </div>
         `;
         comparisonResults.innerHTML = compareHtml;
 
         const ctx = document.getElementById('comparisonChart');
-        if (ctx) {
+        if (ctx && labels.length > 0) { // Only render if there's data to compare
             comparisonChartInstance = new Chart(ctx, {
                 type: 'radar',
                 data: {
                     labels: labels.map(label => label.replace(/([A-Z])/g, ' $1').trim()), // Make labels readable
                     datasets: [
                         {
-                            label: debater1.name,
+                            label: debater1Name,
                             data: data1,
                             backgroundColor: 'rgba(13, 110, 253, 0.2)',
                             borderColor: 'rgba(13, 110, 253, 1)',
                             borderWidth: 1
                         },
                         {
-                            label: debater2.name,
+                            label: debater2Name,
                             data: data2,
                             backgroundColor: 'rgba(220, 53, 69, 0.2)', // Bootstrap danger red with alpha
                             borderColor: 'rgba(220, 53, 69, 1)',
@@ -1271,6 +1406,17 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             renderHomePage(allDebatersData, allMatchesData);
         }
+        // Ensure nav links are correctly highlighted
+        document.querySelectorAll('.navbar-nav .nav-link').forEach(link => {
+            link.classList.remove('active');
+            if (link.getAttribute('href') === hash) {
+                link.classList.add('active');
+            } else if (hash.startsWith('#profile/') && link.getAttribute('href') === '#home') {
+                 // For profile pages, highlight home, or make a separate "profile" link if you have one
+                 // For now, let's assume home is the fallback
+                 link.classList.add('active'); // You might want to refine this logic
+            }
+        });
     }
 
     // --- Initial Load ---
@@ -1280,10 +1426,12 @@ document.addEventListener('DOMContentLoaded', () => {
         handleLocationHash();
         window.addEventListener('hashchange', handleLocationHash);
 
-        // Add event listener for navigation links
+        // Add event listener for navigation links (already present in previous version, ensure it works)
         document.querySelectorAll('.navbar-nav .nav-link').forEach(link => {
             link.addEventListener('click', (event) => {
-                event.preventDefault();
+                // event.preventDefault(); // Let hashchange listener handle navigation
+                // The hashchange listener will be triggered by changing window.location.hash
+                // This prevents double handling and ensures consistency.
                 const targetHash = event.target.getAttribute('href');
                 if (targetHash) {
                     window.location.hash = targetHash;
