@@ -425,47 +425,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const topLowRecordsSection = document.getElementById('topLowRecordsSection');
         if (!topLowRecordsSection) return;
 
-        // Sort debaters for 'Top' records: highest win rate, then more matches
-        const topSortedDebaters = [...debaters].sort((a, b) => {
+        const sortedDebaters = [...debaters].sort((a, b) => {
             const winRateA = (a.wins + a.losses) > 0 ? a.wins / (a.wins + a.losses) : 0;
             const winRateB = (b.wins + b.losses) > 0 ? b.wins / (b.wins + b.losses) : 0;
-            if (winRateA !== winRateB) return winRateB - winRateA; // Higher win rate first
-            return (b.wins + b.losses) - (a.wins + a.losses); // More matches first (for ties in win rate)
-        });
-        const top3 = topSortedDebaters.slice(0, 3);
-        
-        // Filter debaters to only include those with actual losses (losses > 0)
-        // This ensures 0-0 records like Newbie One are excluded from this specific "Low Record" section
-        const lowRecordCandidatesFiltered = debaters.filter(d => d.losses > 0);
-
-        // Sort filtered candidates for 'Low' records:
-        // 1. Lowest Win Rate (Ascending)
-        // 2. If Win Rates are equal: More Total Matches (Descending) - This makes 0-1 appear before 0-0
-        // 3. If Total Matches are also equal: More Losses (Descending)
-        const lowSortedDebaters = [...lowRecordCandidatesFiltered].sort((a, b) => {
-            const winRateA = (a.wins + a.losses) > 0 ? a.wins / (a.wins + a.losses) : 0;
-            const winRateB = (b.wins + b.losses) > 0 ? b.wins / (b.wins + b.losses) : 0;
-
-            if (winRateA !== winRateB) return winRateA - winRateB; // Lower win rate first
-
-            const totalMatchesA = a.wins + a.losses;
-            const totalMatchesB = b.wins + b.losses;
-            if (totalMatchesA !== totalMatchesB) return totalMatchesB - totalMatchesA; // More matches first (e.g., 0-1 before 0-0)
-
-            return b.losses - a.losses; // More losses first for ties
+            if (winRateA !== winRateB) return winRateB - winRateA;
+            return (b.wins + b.losses) - (a.wins + a.losses); // More matches, higher rank if win rates are equal
         });
 
-        // Collect the lowest 3 unique debaters, ensuring they are not already in top3
-        const finalLow3 = [];
-        let count = 0;
-        for (let i = 0; i < lowSortedDebaters.length && count < 3; i++) {
-            const debater = lowSortedDebaters[i];
-            // Only add if not already in top3 to ensure distinctness
-            if (!top3.some(t => t.id === debater.id)) {
-                finalLow3.push(debater);
-                count++;
-            }
-        }
+        const top3 = sortedDebaters.slice(0, 3);
+        const low3StartIndex = Math.max(0, sortedDebaters.length - 3);
+        // Ensure low3 are distinct from top3
+        const low3 = sortedDebaters.slice(low3StartIndex).filter(d => !top3.some(t => t.id === d.id)).reverse();
 
         let html = `
             <div class="col-md-6">
@@ -491,13 +461,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 <h3 class="mb-3 text-danger">Low Record Debaters DBA <i class="fas fa-arrow-down ms-2"></i></h3>
                 <div class="row g-3">
         `;
-        finalLow3.forEach(debater => {
+        low3.forEach(debater => {
             html += `
                 <div class="col-md-4">
                     <div class="card shadow h-100 animate__animated animate__fadeInUp" role="button" aria-label="View ${debater.name}'s profile" onclick="window.location.hash='#profile/${debater.id}'">
                         <div class="card-body">
                             <h4 class="card-title">${debater.name} <img src="${debater.flag}" width="24" class="ms-2" alt="${debater.country_code}"/></h4>
-                            <p class="card-text">Record: <span class="badge bg-danger">${debater.record}</span></p> </div>
+                            <p class="card-text">Record: <span class="badge ${debater.wins > debater.losses ? 'bg-danger' : 'bg-success'}">${debater.record}</span></p>
+                        </div>
                     </div>
                 </div>
             `;
@@ -651,6 +622,11 @@ document.addEventListener('DOMContentLoaded', () => {
             return acc;
         }, {});
 
+        const countryCounts = debaters.reduce((acc, debater) => {
+            acc[debater.country] = (acc[debater.country] || 0) + 1;
+            return acc;
+        }, {});
+
         new Chart(ctx, {
             type: 'bar',
             data: {
@@ -755,13 +731,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="col-md-6 animate__animated animate__fadeInUp">
                         <div class="card shadow ${cardClass}">
                             <div class="card-body d-flex align-items-center">
-                                <img src="${debater.photo}" width="50" class="rounded-circle me-3" alt="${debater.name}">
+                                <img src="${debater.photo}" class="me-3 rounded debater-thumbnail" alt="${debater.name}" loading="lazy">
                                 <div class="flex-grow-1">
                                     <h5 class="fw-bold">${debater.name} <img src="${debater.flag}" width="20" class="ms-1 flag-icon" alt="${debater.country_code}"></h5>
                                     <p class="mb-1">Record: <span class="badge ${debater.wins > debater.losses ? 'bg-success' : 'bg-danger'}">${debater.record}</span></p>
                                     <p class="mb-0">${statusText} vs ${opponent.name} [${latestMatch.method}]</p>
                                 </div>
-                                <img src="${opponentPhoto}" width="40" class="ms-3 rounded-circle" alt="${opponent.name}">
+                                <img src="${opponentPhoto}" width="40" class="ms-3 rounded-circle" alt="${opponent.name}" loading="lazy">
                             </div>
                         </div>
                     </div>
@@ -771,71 +747,48 @@ document.addEventListener('DOMContentLoaded', () => {
         individualMatchHistorySection.innerHTML = html;
     }
 
-    // --- Debater Profile Detail Rendering on Home Page Search ---
-    function renderDetailedProfiles(debaters, query = '') {
-        const detailedProfilesSection = document.getElementById('detailedProfilesSection');
-        if (!detailedProfilesSection) return;
+    // --- Event Listener Attachments (for HomePage) ---
 
-        detailedProfilesSection.innerHTML = ''; // Clear previous results
+    function attachHomePageEventListeners(debaters, matches) {
+        // Leaderboard Search & Filters
+        const leaderboardSearchInput = document.getElementById('leaderboardSearch');
+        const tierFilterSelect = document.getElementById('tierFilter');
+        const countryFilterSelect = document.getElementById('countryFilter');
 
-        const filteredDebaters = debaters.filter(debater =>
-            query === '' || debater.name.toLowerCase().includes(query.toLowerCase())
-        );
+        const applyLeaderboardFilters = () => {
+            const query = leaderboardSearchInput ? leaderboardSearchInput.value : '';
+            const tier = tierFilterSelect ? tierFilterSelect.value : '';
+            const country = countryFilterSelect ? countryFilterSelect.value : '';
+            renderLeaderboard(debaters, query, tier, country, currentLeaderboardSort.column, currentLeaderboardSort.order);
+        };
 
-        if (filteredDebaters.length === 0 && query !== '') {
-            detailedProfilesSection.innerHTML = `
-                <div class="col-12 text-center text-muted animate__animated animate__fadeIn">
-                    <p><i class="fas fa-exclamation-circle me-2"></i> No debaters found matching "${query}".</p>
-                </div>
-            `;
-            return;
+        if (leaderboardSearchInput) leaderboardSearchInput.addEventListener('keyup', applyLeaderboardFilters);
+        if (tierFilterSelect) tierFilterSelect.addEventListener('change', applyLeaderboardFilters);
+        if (countryFilterSelect) countryFilterSelect.addEventListener('change', applyLeaderboardFilters);
+
+        // Debater Profile Search
+        const debaterProfileSearchInput = document.getElementById('debaterProfileSearch');
+        if (debaterProfileSearchInput) {
+            debaterProfileSearchInput.addEventListener('keyup', (event) => {
+                renderDetailedProfiles(debaters, event.target.value);
+            });
         }
 
-        // Limit to top 3 results for detailed view on home page to keep it concise
-        filteredDebaters.slice(0, 3).forEach(debater => {
-            let metricsHtml = '';
-            const metricLabels = [];
-            const metricScores = [];
-            for (const [metricName, metricScore] of Object.entries(debater.metrics)) {
-                const widthPercentage = (parseFloat(metricScore) / 10) * 100;
-                metricsHtml += `
-                    <div class="profile-metric">
-                        <span>${metricName}:</span>
-                        <div class="progress flex-grow-1" role="progressbar" aria-label="${metricName} score">
-                            <div class="progress-bar" style="width: ${widthPercentage}%;" aria-valuenow="${metricScore}" aria-valuemin="0" aria-valuemax="10"></div>
-                        </div>
-                        <span class="metric-value">${metricScore}/10</span>
-                    </div>
-                `;
-                metricLabels.push(metricName);
-                metricScores.push(parseFloat(metricScore));
-            }
-
-            detailedProfilesSection.innerHTML += `
-                <div class="col-lg-4 col-md-6 animate__animated animate__fadeInUp">
-                    <div class="card shadow p-3 h-100">
-                        <div class="text-center">
-                            <img src="${debater.photo}" class="profile-avatar mb-2" alt="${debater.name}">
-                            <h4 class="profile-name">${debater.name} <img src="${debater.flag}" width="20" class="ms-1" alt="${debater.country_code}"/></h4>
-                            <p class="profile-record">Record: <span class="badge ${debater.wins > debater.losses ? 'bg-success' : 'bg-danger'}">${debater.record}</span></p>
-                            <a href="#profile/${debater.id}" class="btn btn-sm btn-primary mb-3" aria-label="View full profile for ${debater.name}"><i class="fas fa-info-circle me-1"></i> View Full Profile</a>
-                        </div>
-                        <div class="profile-metrics">
-                            ${metricsHtml}
-                        </div>
-                    </div>
-                </div>
-            `;
+        // Leaderboard Sorting
+        document.querySelectorAll('.table thead th[data-sort]').forEach(header => {
+            header.addEventListener('click', () => {
+                const sortColumn = header.dataset.sort;
+                // Toggle sort order based on current column and order
+                if (currentLeaderboardSort.column === sortColumn) {
+                    currentLeaderboardSort.order = currentLeaderboardSort.order === 'asc' ? 'desc' : 'asc';
+                } else {
+                    currentLeaderboardSort.column = sortColumn;
+                    currentLeaderboardSort.order = 'asc'; // Default to ascending when changing column
+                }
+                applyLeaderboardFilters(); // Re-render with new sort
+            });
         });
-        if (query === '' && filteredDebaters.length === 0) {
-            detailedProfilesSection.innerHTML = `
-                <div class="col-12 text-center text-muted animate__animated animate__fadeIn">
-                  <p><i class="fas fa-search me-2"></i> Ketik nama debater di atas untuk melihat metrik profil lengkap mereka.</p>
-                </div>
-            `;
-        }
     }
-
 
     // --- Comparison Page Logic ---
 
@@ -851,11 +804,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     <p><i class="fas fa-info-circle me-2"></i> Select two debaters above to compare their profiles.</p>
                 </div>
             `;
-            // Destroy previous chart instance if exists
-            if (comparisonChartInstance) {
-                comparisonChartInstance.destroy();
-                comparisonChartInstance = null;
-            }
             return;
         }
 
@@ -1120,4 +1068,3 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initial route load
     router();
 });
-.
