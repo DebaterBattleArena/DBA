@@ -247,14 +247,12 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .debater-profile .card-img-top.profile-avatar {
-    width: 100px; /* Diperkecil dari 150px */
-    height: 100px; /* Diperkecil dari 150px */
+    width: 80px; /* Diperkecil dari 150px/100px */
+    height: 80px; /* Diperkecil dari 150px/100px */
     border-radius: 50%;
     object-fit: cover;
     margin: 20px auto 10px auto;
     border: 4px solid #0d6efd;
-}
-
 }
 
 .debater-profile .profile-name {
