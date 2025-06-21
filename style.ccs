@@ -14,9 +14,10 @@ h1, h2, h3, h4, h5, h6 {
 .hero-image-container {
   position: relative;
   width: 100%;
-  padding-top: 56.25%; /* 16:9 Aspect Ratio */
+  /* Removed padding-top: 56.25%; here to prevent stretching */
   overflow: hidden;
-  border-bottom: 5px solid #0d6efd; /* Added separator */
+  border-bottom: 5px solid #0d6efd;
+  height: 400px; /* **Fixed height for hero image container** */
 }
 
 .hero-image-container img {
@@ -24,7 +25,7 @@ h1, h2, h3, h4, h5, h6 {
   top: 0;
   left: 0;
   width: 100%;
-  height: 100%;
+  height: 100%; /* **Make image fill container** */
   object-fit: cover;
   object-position: center;
 }
