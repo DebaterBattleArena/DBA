@@ -425,30 +425,35 @@ document.addEventListener('DOMContentLoaded', () => {
         const topLowRecordsSection = document.getElementById('topLowRecordsSection');
         if (!topLowRecordsSection) return;
 
-        // Sort debaters by win rate descending, then by total matches descending
-        // This puts best records first, and worst records last.
-        const sortedDebaters = [...debaters].sort((a, b) => {
+        // Sort debaters for 'Top' records: highest win rate, then more matches
+        const topSortedDebaters = [...debaters].sort((a, b) => {
             const winRateA = (a.wins + a.losses) > 0 ? a.wins / (a.wins + a.losses) : 0;
             const winRateB = (b.wins + b.losses) > 0 ? b.wins / (b.wins + b.losses) : 0;
             if (winRateA !== winRateB) return winRateB - winRateA; // Higher win rate first
             return (b.wins + b.losses) - (a.wins + a.losses); // More matches first (for ties in win rate)
         });
-
-        const top3 = sortedDebaters.slice(0, 3);
+        const top3 = topSortedDebaters.slice(0, 3);
         
-        // Build low3 by iterating from the end of the sorted list, ensuring uniqueness from top3
+        // Sort debaters for 'Low' records: lowest win rate, then more matches (to prioritize 0-1 over 0-0)
+        const lowSortedDebaters = [...debaters].sort((a, b) => {
+            const winRateA = (a.wins + a.losses) > 0 ? a.wins / (a.wins + a.losses) : 0;
+            const winRateB = (b.wins + b.losses) > 0 ? b.wins / (b.wins + b.losses) : 0;
+            if (winRateA !== winRateB) return winRateA - winRateB; // Lower win rate first
+            return (b.wins + b.losses) - (a.wins + a.losses); // More matches first for ties in low win rate (e.g., 0-1 before 0-0)
+        });
+
+        // Collect the lowest 3 unique debaters, ensuring they are not already in top3
         const finalLow3 = [];
         let count = 0;
-        for (let i = sortedDebaters.length - 1; i >= 0 && count < 3; i--) {
-            const debater = sortedDebaters[i];
+        for (let i = 0; i < lowSortedDebaters.length && count < 3; i++) {
+            const debater = lowSortedDebaters[i];
             // Only add if not already in top3 to ensure distinctness
             if (!top3.some(t => t.id === debater.id)) {
                 finalLow3.push(debater);
                 count++;
             }
         }
-        // Reverse finalLow3 to display the absolute worst first within the low record section
-        finalLow3.reverse(); 
+        // No need to reverse finalLow3 here as lowSortedDebaters is already ordered from worst to better within low tier
 
         let html = `
             <div class="col-md-6">
@@ -631,11 +636,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const tierCounts = debaters.reduce((acc, debater) => {
             acc[debater.tier] = (acc[debater.tier] || 0) + 1;
-            return acc;
-        }, {});
-
-        const countryCounts = debaters.reduce((acc, debater) => {
-            acc[debater.country] = (acc[debater.country] || 0) + 1;
             return acc;
         }, {});
 
