@@ -12,13 +12,17 @@ document.addEventListener('DOMContentLoaded', () => {
     function showToast(message, type = 'info') {
         const toastEl = document.getElementById('liveToast');
         const toastBody = document.getElementById('toastBody');
-        if (!toastEl || !toastBody) {
-            console.warn("Toast elements not found. Message:", message);
-            return; // Exit if elements are not found
-        }
+        if (!toastEl || !toastBody) return; // Guard against missing elements
+
         toastBody.textContent = message;
-        toastEl.className = 'toast hide'; // Reset classes
-        toastEl.classList.add('text-bg-' + type);
+
+        toastEl.classList.remove('text-bg-primary', 'text-bg-success', 'text-bg-danger', 'text-bg-warning', 'text-bg-info');
+        if (type === 'success') toastEl.classList.add('text-bg-success');
+        else if (type === 'error') toastEl.classList.add('text-bg-danger');
+        else if (type === 'warning') toastEl.classList.add('text-bg-warning');
+        else if (type === 'info') toastEl.classList.add('text-bg-info');
+        else toastEl.classList.add('text-bg-primary');
+
         const toast = new bootstrap.Toast(toastEl);
         toast.show();
     }
@@ -31,8 +35,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function getSafeImagePath(path) {
-        // Simple check if path is defined and not empty, otherwise return default
-        // This is crucial for preventing broken image icons and potential layout issues
         return path && path !== '' ? path : 'default_avatar.png';
     }
 
@@ -43,7 +45,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const response = await fetch('data.json');
             if (!response.ok) {
                 const errorDetail = response.statusText || `HTTP status ${response.status}`;
-                throw new Error(`Failed to load data.json: ${errorDetail}.`);
+                throw new Error(`Failed to fetch data.json: ${errorDetail}.`);
             }
             const data = await response.json();
             allDebatersData = data.debaters;
@@ -59,7 +61,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <i class="fas fa-exclamation-triangle fa-3x mb-3"></i>
                     <h2>Failed to Load Application Data!</h2>
                     <p>Error: ${error.message}</p>
-                    <p>Please ensure 'data.json' exists in the same folder and is valid JSON. Also, verify you are running a local web server (e.g., Live Server in VS Code) if opening directly from file system.</p>
+                    <p>Please ensure 'data.json' exists in the same folder and is valid JSON. Also, verify you are running a local web server (e.g., Live Server in VS Code).</p>
                 </div>
             `);
             return null;
@@ -68,10 +70,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Page Rendering Functions ---
 
-    // This function renders the content for the HOME page
     function renderHomePageContent(debaters, matches) {
-        console.log("Rendering Home Page Content..."); // Debugging
-        const contentHtml = `
+        console.log("Rendering Home Page Content...");
+        const homePageHtml = `
             <div class="hero-image-container animate__animated animate__fadeIn">
               <img src="7745A053-1315-4B4D-AB24-9BFB05370A20.jpeg" alt="Debater Battle Arena Hero" loading="lazy">
             </div>
@@ -312,6 +313,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (overallStatsChartInstance) {
                 overallStatsChartInstance.destroy();
                 overallStatsChartInstance = null;
+            }
+            if (radarChartInstance) { // Destroy previous radar chart instance if it exists
+                radarChartInstance.destroy();
+                radarChartInstance = null;
             }
             if (comparisonChartInstance) {
                 comparisonChartInstance.destroy();
@@ -725,6 +730,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         icon.classList.add(sortOrder === 'asc' ? 'fa-sort-up' : 'fa-sort-down');
                         th.setAttribute('aria-sort', sortOrder === 'asc' ? 'ascending' : 'descending');
                     } else {
+                        th.classList.add('sortable'); // Add a class for sortable headers
                         icon.classList.add('fa-sort');
                         th.setAttribute('aria-sort', 'none');
                     }
@@ -858,7 +864,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <div class="card-body d-flex align-items-center">
                                     <img src="${getSafeImagePath(debater.photo)}" class="me-3 rounded debater-thumbnail" alt="${debater.name}" loading="lazy">
                                     <div class="flex-grow-1">
-                                        <h5 class="fw-bold">${debater.name} <img src="${getSafeImagePath(debater.flag)}" width="20" class="ms-1 flag-icon" alt="${debater.country_code}"></h5>
+                                        <h5 class="fw-bold">${debater.name} <img src="${getSafeImagePath(debater.flag)}" width="20" class="ms-1" alt="${debater.country_code}"></h5>
                                         <p class="mb-1">Record: <span class="badge ${debater.wins > debater.losses ? 'bg-success' : 'bg-danger'}">${debater.record}</span></p>
                                         <p class="mb-0">${statusText} vs ${opponent.name} [${latestMatch.method}]</p>
                                     </div>
@@ -872,7 +878,7 @@ document.addEventListener('DOMContentLoaded', () => {
             individualMatchHistorySection.innerHTML = html;
         }
 
-        // --- Event Listener Attachments ---
+        // --- Event Listener Attachments (for homepage sections) ---
 
         function attachHomePageEventListeners(debaters, matches) {
             console.log("Attaching Home Page Event Listeners...");
@@ -948,8 +954,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const updateComparison = () => {
                 const id1 = debaterSelect1.value;
-                const id2 = debaterSelect2.value;
-
+                const id2 = debater2.value; // Corrected ID variable
+                
                 const debater1 = debaters.find(d => d.id === id1);
                 const debater2 = debaters.find(d => d.id === id2);
 
@@ -1145,7 +1151,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const path = window.location.hash.slice(1) || 'home'; // Get path after # or default to 'home'
             const [route, id] = path.split('/');
 
-            // Initial spinner is directly in index.html.
             // Clear any previous chart instances when routing changes
             if (overallStatsChartInstance) {
                 overallStatsChartInstance.destroy();
