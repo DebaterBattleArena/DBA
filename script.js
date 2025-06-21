@@ -54,7 +54,7 @@ document.addEventListener('DOMContentLoaded', () => {
             allDebatersData = data.debaters;
             allMatchesData = data.matches;
             console.log("Data loaded successfully:", allDebatersData, allMatchesData); // Log success
-            // showToast('Data loaded successfully!', 'success'); // Optional: can remove this toast as well
+            showToast('Data loaded successfully!', 'success');
             return data;
         } catch (error) {
             console.error("Error fetching or parsing data.json:", error); // Log detailed error
@@ -112,7 +112,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <hr class="my-5">
 
             <section class="container my-5">
-              <h2 class="text-center fw-bold text-uppercase mb-4 animate__animated animate__fadeInDown">Leaderboard Per Tier (DBA) <i class="fas fa-trophy ms-2"></i></h2>
+              <h2 class="text-center fw-bold text-uppercase animate__animated animate__fadeInDown">Leaderboard Per Tier (DBA) <i class="fas fa-trophy ms-2"></i></h2>
 
               <div class="leaderboard-filters row mb-3 animate__animated animate__fadeIn">
                 <div class="col-md-6 mb-2">
@@ -324,7 +324,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Render Radar Chart
             const ctxRadar = document.getElementById('radarChart');
-            if (ctxRadar) { // Ensure canvas element exists before rendering chart
+            if (ctxRadar) {
                 new Chart(ctxRadar, {
                     type: 'radar',
                     data: {
@@ -392,40 +392,35 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 let matchesHtml = '';
                 if (debaterMatches.length > 0) {
-                    matchesHtml = '<div class="col-12"><p class="text-center text-muted">Loading matches...</p></div>'; // Temp message
-                    setTimeout(() => { // Use timeout to allow initial render
-                        matchesHtml = '';
-                        debaterMatches.forEach(match => {
-                            const isWinner = match.winner === debater.name;
-                            const opponent = match.debater1.id === debater.id ? match.debater2 : match.debater1;
-                            const statusBadgeClass = isWinner ? 'bg-success' : 'bg-danger';
-                            const statusText = isWinner ? 'WIN' : 'LOSS';
-                            const cardBackgroundClass = isWinner ? 'win-card' : 'loss-card';
-                            
-                            const opponentDebater = debaters.find(d => d.id === opponent.id);
-                            const opponentPhoto = getSafeImagePath(opponentDebater ? opponentDebater.photo : '');
-                            const matchDate = match.date ? new Date(match.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'Unknown Date';
+                    debaterMatches.forEach(match => {
+                        const isWinner = match.winner === debater.name;
+                        const opponent = match.debater1.id === debater.id ? match.debater2 : match.debater1;
+                        const statusBadgeClass = isWinner ? 'bg-success' : 'bg-danger';
+                        const statusText = isWinner ? 'WIN' : 'LOSS';
+                        const cardBackgroundClass = isWinner ? 'win-card' : 'loss-card';
+                        
+                        const opponentDebater = debaters.find(d => d.id === opponent.id);
+                        const opponentPhoto = getSafeImagePath(opponentDebater ? opponentDebater.photo : '');
+                        const matchDate = match.date ? new Date(match.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'Unknown Date';
 
-                            matchesHtml += `
-                                <div class="col-md-12">
-                                    <div class="card shadow p-3 mb-2 d-flex flex-row align-items-center ${cardBackgroundClass} animate__animated animate__fadeIn">
-                                        <img src="${getSafeImagePath(debater.photo)}" width="50" class="rounded-circle me-3" alt="${debater.name}" loading="lazy">
-                                        <div class="flex-grow-1">
-                                            <h6 class="mb-1 fw-bold">${debater.name} <span class="badge ${statusBadgeClass}">${statusText}</span> vs ${opponent.name}</h6>
-                                            <small class="text-muted">Method: ${match.method} - Character: ${debater.character} vs ${opponent.character}</small><br>
-                                            <small class="text-muted"><i class="fas fa-calendar-alt me-1"></i> Date: ${matchDate} ${match.event ? `(Event: ${match.event})` : ''}</small>
-                                        </div>
-                                        <img src="${opponentPhoto}" width="50" class="rounded-circle ms-3" alt="${opponent.name}" loading="lazy">
+                        matchesHtml += `
+                            <div class="col-md-12">
+                                <div class="card shadow p-3 mb-2 d-flex flex-row align-items-center ${cardBackgroundClass} animate__animated animate__fadeIn">
+                                    <img src="${getSafeImagePath(debater.photo)}" width="50" class="rounded-circle me-3" alt="${debater.name}" loading="lazy">
+                                    <div class="flex-grow-1">
+                                        <h6 class="mb-1 fw-bold">${debater.name} <span class="badge ${statusBadgeClass}">${statusText}</span> vs ${opponent.name}</h6>
+                                        <small class="text-muted">Method: ${match.method} - Character: ${debater.character} vs ${opponent.character}</small><br>
+                                        <small class="text-muted"><i class="fas fa-calendar-alt me-1"></i> Date: ${matchDate} ${match.event ? `(Event: ${match.event})` : ''}</small>
                                     </div>
+                                    <img src="${opponentPhoto}" width="50" class="rounded-circle ms-3" alt="${opponent.name}" loading="lazy">
                                 </div>
-                            `;
-                        });
-                        individualFullMatchHistorySection.innerHTML = matchesHtml;
-                    }, 50); // Small delay to allow canvas to render
+                            </div>
+                        `;
+                    });
                 } else {
                     matchesHtml = `<div class="col-12"><p class="text-center text-muted">No match history available for this debater.</p></div>`;
-                    individualFullMatchHistorySection.innerHTML = matchesHtml;
                 }
+                individualFullMatchHistorySection.innerHTML = matchesHtml;
             }
         }
 
@@ -657,9 +652,10 @@ document.addEventListener('DOMContentLoaded', () => {
         router();
     });
     ```
+
 ---
 
-### 3. `data.json` (Sama persis dengan versi sebelumnya, tanpa Newbie One)
+### 4. `data.json` (Sama persis dengan versi sebelumnya, tanpa Newbie One)
 
 ```json
 {
