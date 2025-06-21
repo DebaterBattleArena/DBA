@@ -155,6 +155,32 @@
         "Philosophy": 3,
         "General Knowledge": 7
       }
+    },
+    {
+      "id": "newbie_one",
+      "name": "Newbie One",
+      "country": "Indonesia",
+      "country_code": "ID",
+      "flag": "IMG_0417.png",
+      "photo": "default_avatar.png",
+      "record": "0 - 0",
+      "wins": 0,
+      "losses": 0,
+      "tier": "Low Tier",
+      "character": "Placeholder",
+      "summary": "A new debater showing promising signs.",
+      "bio": "Newbie One recently joined the arena and is eager to learn and grow. Still building experience, but has potential.",
+      "metrics": {
+        "Rhetoric": 4,
+        "Typing Structure": 4,
+        "Critical Thinking": 3,
+        "Logical Fallacies": 3,
+        "Typing Strength": 4,
+        "Tiering System": 3,
+        "Calculations": 3,
+        "Philosophy": 3,
+        "General Knowledge": 5
+      }
     }
   ],
   "matches": [
@@ -166,7 +192,9 @@
       "debater1": { "id": "zogratis", "name": "Zogratis", "character": "Ohmazio" },
       "debater2": { "id": "muchibei", "name": "Muchibei", "character": "Unicron" },
       "winner": "Zogratis",
-      "method": "Decision Point"
+      "method": "Decision Point",
+      "date": "2025-06-15",
+      "event": "Weekly Showdown"
     },
     {
       "id": "match2",
@@ -176,7 +204,9 @@
       "debater1": { "id": "aryanwt", "name": "Aryanwt", "character": "Ha Dowan" },
       "debater2": { "id": "rim", "name": "Rim", "character": "Izuru" },
       "winner": "Aryanwt",
-      "method": "Decision Point"
+      "method": "Decision Point",
+      "date": "2025-06-10",
+      "event": "Mid-Season Clash"
     },
     {
       "id": "match3",
@@ -186,7 +216,9 @@
       "debater1": { "id": "hiroo", "name": "Hiroo", "character": "Jaehwan" },
       "debater2": { "id": "renji", "name": "Renji", "character": "Sukuna" },
       "winner": "Hiroo",
-      "method": "Limit Turn"
+      "method": "Limit Turn",
+      "date": "2025-06-05",
+      "event": "Opening Battle"
     }
   ]
 }
