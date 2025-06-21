@@ -15,15 +15,15 @@
       "summary": "Hiroo is a great debater, known for his sharp arguments and quick retorts.",
       "bio": "Hiroo is known as a debater capable of turning the tide with unexpected arguments and profound analysis. This Jaehwan user is always ready to face any challenge in the arena.",
       "metrics": {
-        "Rhetoric": 8,
-        "Typing Structure": 8,
-        "Critical Thinking": 8,
-        "Logical Fallacies": 8,
-        "Typing Strength": 8,
+        "Rhetoric": 9,
+        "Typing Structure": 9,
+        "Critical Thinking": 10,
+        "Logical Fallacies": 0,
+        "Typing Strength": 9,
         "Tiering System": 8,
         "Calculations": 8,
-        "Philosophy": 8,
-        "General Knowledge": 8
+        "Philosophy": 9,
+        "General Knowledge": 10
       }
     },
     {
@@ -41,15 +41,15 @@
       "summary": "Zogratis is a tough debater, master of solid strategies and strong defense.",
       "bio": "Zogratis is a debater with a careful strategic approach. With Ohmazio as his character, he often dominates matches with thorough preparation and perfect argument execution.",
       "metrics": {
-        "Rhetoric": 8,
-        "Typing Structure": 8,
-        "Critical Thinking": 8,
-        "Logical Fallacies": 8,
-        "Typing Strength": 8,
-        "Tiering System": 8,
-        "Calculations": 8,
-        "Philosophy": 8,
-        "General Knowledge": 8
+        "Rhetoric": 6,
+        "Typing Structure": 5,
+        "Critical Thinking": 7,
+        "Logical Fallacies": 3,
+        "Typing Strength": 5,
+        "Tiering System": 6,
+        "Calculations": 2,
+        "Philosophy": 0,
+        "General Knowledge": 7
       }
     },
     {
@@ -68,14 +68,14 @@
       "bio": "Aryanwt brings a fresh perspective to every debate. Using Ha Dowan, he is known for his ability to present innovative solutions and attack opponents' arguments with undeniable logic.",
       "metrics": {
         "Rhetoric": 8,
-        "Typing Structure": 8,
-        "Critical Thinking": 8,
-        "Logical Fallacies": 8,
-        "Typing Strength": 8,
-        "Tiering System": 8,
-        "Calculations": 8,
-        "Philosophy": 8,
-        "General Knowledge": 8
+        "Typing Structure": 7,
+        "Critical Thinking": 9,
+        "Logical Fallacies": 1,
+        "Typing Strength": 7,
+        "Tiering System": 9,
+        "Calculations": 0,
+        "Philosophy": 7,
+        "General Knowledge": 10
       }
     },
     {
@@ -93,15 +93,15 @@
       "summary": "Renji is a powerful debater, known for his persuasive and aggressive style.",
       "bio": "Renji shows potential in rhetoric, but still needs to improve several other technical aspects.",
       "metrics": {
-        "Rhetoric": 5,
-        "Typing Structure": 5,
-        "Critical Thinking": 5,
-        "Logical Fallacies": 5,
-        "Typing Strength": 5,
-        "Tiering System": 5,
-        "Calculations": 5,
-        "Philosophy": 5,
-        "General Knowledge": 5
+        "Rhetoric": 3,
+        "Typing Structure": 2,
+        "Critical Thinking": 1,
+        "Logical Fallacies": 0,
+        "Typing Strength": 1,
+        "Tiering System": 1,
+        "Calculations": 0,
+        "Philosophy": 0,
+        "General Knowledge": 1
       }
     },
     {
@@ -121,13 +121,13 @@
       "metrics": {
         "Rhetoric": 5,
         "Typing Structure": 5,
-        "Critical Thinking": 5,
-        "Logical Fallacies": 5,
-        "Typing Strength": 5,
-        "Tiering System": 5,
-        "Calculations": 5,
-        "Philosophy": 5,
-        "General Knowledge": 5
+        "Critical Thinking": 7,
+        "Logical Fallacies": 2,
+        "Typing Strength": 7,
+        "Tiering System": 4,
+        "Calculations": 4,
+        "Philosophy": 0,
+        "General Knowledge": 8
       }
     },
     {
@@ -145,15 +145,15 @@
       "summary": "Rim shows flexibility, but needs to strengthen his understanding of Logical Fallacies and Calculations.",
       "bio": "Rim is an adaptive debater, capable of changing strategies in the middle of a battle. With Izuru as his character, he always looks for ways to find opponents' weaknesses, making him an unpredictable opponent.",
       "metrics": {
-        "Rhetoric": 5,
+        "Rhetoric": 4,
         "Typing Structure": 5,
-        "Critical Thinking": 5,
-        "Logical Fallacies": 5,
-        "Typing Strength": 5,
-        "Tiering System": 5,
-        "Calculations": 5,
-        "Philosophy": 5,
-        "General Knowledge": 5
+        "Critical Thinking": 4.5,
+        "Logical Fallacies": 2,
+        "Typing Strength": 3.5,
+        "Tiering System": 4.3,
+        "Calculations": 3.6,
+        "Philosophy": 3,
+        "General Knowledge": 7
       }
     }
   ],
