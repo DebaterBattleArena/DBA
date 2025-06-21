@@ -91,7 +91,7 @@ document.addEventListener('DOMContentLoaded', () => {
         imgElement.onerror = null; // Prevent infinite loop if fallback also fails
         imgElement.src = 'assets/default_avatar.png'; // Path to a default avatar image
         imgElement.alt = 'Default Avatar';
-        // console.warn(`Image failed to load: ${imgElement.src}, replacing with default.`); // Optional: for debugging
+        console.warn(`Image failed to load: ${imgElement.src}, replacing with default.`); // For debugging
     };
 
     // --- Rendering Functions for various pages/sections ---
@@ -994,24 +994,37 @@ document.addEventListener('DOMContentLoaded', () => {
         let html = '';
         if (sortedMatches.length > 0) {
             sortedMatches.forEach(match => {
+                // IMPORTANT: Ensure debater IDs are valid before trying to find them
+                const debater1Id = match.debater1?.id;
+                const debater2Id = match.debater2?.id;
+
                 // Safely get debater data from allDebatersData first, then fallback to match data
-                const debater1FullData = allDebatersData.find(d => d.id === match.debater1.id);
-                const debater2FullData = allDebatersData.find(d => d.id === match.debater2.id);
+                const debater1FullData = debater1Id ? allDebatersData.find(d => d.id === debater1Id) : null;
+                const debater2FullData = debater2Id ? allDebatersData.find(d => d.id === debater2Id) : null;
 
                 // Use the full data if found, otherwise use the data embedded in the match object
-                const debater1DataForDisplay = debater1FullData || match.debater1;
-                const debater2DataForDisplay = debater2FullData || match.debater2;
+                const debater1DataForDisplay = debater1FullData || match.debater1 || {}; // Fallback to empty object
+                const debater2DataForDisplay = debater2FullData || match.debater2 || {}; // Fallback to empty object
 
                 // Provide default values for potentially missing properties for display
                 const debater1Photo = debater1DataForDisplay.photo || 'assets/default_avatar.png';
                 const debater2Photo = debater2DataForDisplay.photo || 'assets/default_avatar.png';
                 const debater1Name = debater1DataForDisplay.name || 'Unknown Debater 1';
                 const debater2Name = debater2DataForDisplay.name || 'Unknown Debater 2';
-                const debater1Character = debater1DataForDisplay.character || 'Unknown';
-                const debater2Character = debater2DataForDisplay.character || 'Unknown';
+                // Use character from match-specific data first, then full debater data, then default
+                const debater1Character = match.debater1?.character || debater1FullData?.character || 'Unknown';
+                const debater2Character = match.debater2?.character || debater2FullData?.character || 'Unknown';
+
 
                 const winnerName = match.winner || 'N/A';
-                const winnerBadgeClass = winnerName === debater1Name ? 'bg-primary' : 'bg-danger';
+                // Determine winner badge class based on winner name matching debater names
+                let winnerBadgeClass = 'bg-secondary'; // Default neutral color
+                if (winnerName === debater1Name && winnerName !== 'N/A') {
+                    winnerBadgeClass = 'bg-primary'; // Assuming debater1 is "good" or primary color
+                } else if (winnerName === debater2Name && winnerName !== 'N/A') {
+                    winnerBadgeClass = 'bg-danger'; // Assuming debater2 is "bad" or danger color
+                }
+
 
                 const matchDate = match.date ? new Date(match.date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : 'N/A';
                 const matchMethod = match.method || 'N/A';
@@ -1026,7 +1039,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <div class="card-body text-center">
                                 <div class="d-flex justify-content-around align-items-center mb-3">
                                     <div class="debater-info">
-                                        <a href="#profile/${debater1DataForDisplay.id || ''}" class="text-decoration-none text-dark">
+                                        <a href="#profile/${debater1Id || ''}" class="text-decoration-none text-dark">
                                             <img src="${debater1Photo}" class="rounded-circle match-avatar" alt="${debater1Name}" onerror="onImageError(this)">
                                             <p class="mb-0 fw-bold">${debater1Name}</p>
                                         </a>
@@ -1034,7 +1047,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                     </div>
                                     <span class="vs-text fw-bold mx-2">VS</span>
                                     <div class="debater-info">
-                                        <a href="#profile/${debater2DataForDisplay.id || ''}" class="text-decoration-none text-dark">
+                                        <a href="#profile/${debater2Id || ''}" class="text-decoration-none text-dark">
                                             <img src="${debater2Photo}" class="rounded-circle match-avatar" alt="${debater2Name}" onerror="onImageError(this)">
                                             <p class="mb-0 fw-bold">${debater2Name}</p>
                                         </a>
@@ -1085,7 +1098,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!debater.id) return; // Skip if debater somehow has no ID
 
             const debaterMatches = matches.filter(match =>
-                match.debater1.id === debater.id || match.debater2.id === debater.id
+                match.debater1?.id === debater.id || match.debater2?.id === debater.id // Safe check for debater IDs in match
             ).sort((a, b) => {
                 const dateA = a.date ? new Date(a.date) : new Date(0);
                 const dateB = b.date ? new Date(b.date) : new Date(0);
@@ -1107,23 +1120,25 @@ document.addEventListener('DOMContentLoaded', () => {
                             <ul class="list-group list-group-flush">
                 `;
                 debaterMatches.forEach(match => {
-                    const opponentMatchData = match.debater1.id === debater.id ? match.debater2 : match.debater1;
-                    const opponentFullData = allDebatersData.find(d => d.id === opponentMatchData.id);
+                    // Ensure opponent data exists before accessing properties
+                    const opponentMatchData = match.debater1?.id === debater.id ? match.debater2 : match.debater1;
+                    const opponentId = opponentMatchData?.id;
+                    const opponentFullData = opponentId ? allDebatersData.find(d => d.id === opponentId) : null;
 
                     const isWinner = match.winner === debater.name;
                     const statusBadgeClass = isWinner ? 'bg-success' : 'bg-danger';
                     const statusText = isWinner ? 'WIN' : 'LOSS';
                     const matchDate = match.date ? new Date(match.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'N/A';
 
-                    // Use opponentFullData if available, otherwise fallback to opponentMatchData
-                    const opponentName = (opponentFullData ? opponentFullData.name : opponentMatchData.name) || 'Unknown Opponent';
-                    const opponentPhoto = (opponentFullData ? opponentFullData.photo : opponentMatchData.photo) || 'assets/default_avatar.png';
+                    // Use opponentFullData if available, otherwise fallback to opponentMatchData, then defaults
+                    const opponentName = (opponentFullData ? opponentFullData.name : opponentMatchData?.name) || 'Unknown Opponent';
+                    const opponentPhoto = (opponentFullData ? opponentFullData.photo : opponentMatchData?.photo) || 'assets/default_avatar.png';
                     const matchMethod = match.method || 'N/A';
 
                     html += `
                         <li class="list-group-item d-flex justify-content-between align-items-center">
                             <div>
-                                <span class="badge ${statusBadgeClass}">${statusText}</span> vs <a href="#profile/${opponentMatchData.id || ''}" class="text-decoration-none">${opponentName}</a>
+                                <span class="badge ${statusBadgeClass}">${statusText}</span> vs <a href="#profile/${opponentId || ''}" class="text-decoration-none">${opponentName}</a>
                                 <br><small class="text-muted">${matchMethod} - ${matchDate}</small>
                             </div>
                             <img src="${opponentPhoto}" width="30" height="30" class="rounded-circle object-fit-cover" alt="${opponentName}" onerror="onImageError(this)">
@@ -1414,7 +1429,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } else if (hash.startsWith('#profile/') && link.getAttribute('href') === '#home') {
                  // For profile pages, highlight home, or make a separate "profile" link if you have one
                  // For now, let's assume home is the fallback
-                 link.classList.add('active'); // You might want to refine this logic
+                 // link.classList.add('active'); // You might want to refine this logic
             }
         });
     }
