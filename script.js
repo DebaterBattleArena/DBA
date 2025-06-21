@@ -425,17 +425,30 @@ document.addEventListener('DOMContentLoaded', () => {
         const topLowRecordsSection = document.getElementById('topLowRecordsSection');
         if (!topLowRecordsSection) return;
 
+        // Sort debaters by win rate descending, then by total matches descending
+        // This puts best records first, and worst records last.
         const sortedDebaters = [...debaters].sort((a, b) => {
             const winRateA = (a.wins + a.losses) > 0 ? a.wins / (a.wins + a.losses) : 0;
             const winRateB = (b.wins + b.losses) > 0 ? b.wins / (b.wins + b.losses) : 0;
-            if (winRateA !== winRateB) return winRateB - winRateA;
-            return (b.wins + b.losses) - (a.wins + a.losses); // More matches, higher rank if win rates are equal
+            if (winRateA !== winRateB) return winRateB - winRateA; // Higher win rate first
+            return (b.wins + b.losses) - (a.wins + a.losses); // More matches first (for ties in win rate)
         });
 
         const top3 = sortedDebaters.slice(0, 3);
-        const low3StartIndex = Math.max(0, sortedDebaters.length - 3);
-        // Ensure low3 are distinct from top3
-        const low3 = sortedDebaters.slice(low3StartIndex).filter(d => !top3.some(t => t.id === d.id)).reverse();
+        
+        // Build low3 by iterating from the end of the sorted list, ensuring uniqueness from top3
+        const finalLow3 = [];
+        let count = 0;
+        for (let i = sortedDebaters.length - 1; i >= 0 && count < 3; i--) {
+            const debater = sortedDebaters[i];
+            // Only add if not already in top3 to ensure distinctness
+            if (!top3.some(t => t.id === debater.id)) {
+                finalLow3.push(debater);
+                count++;
+            }
+        }
+        // Reverse finalLow3 to display the absolute worst first within the low record section
+        finalLow3.reverse(); 
 
         let html = `
             <div class="col-md-6">
@@ -461,14 +474,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 <h3 class="mb-3 text-danger">Low Record Debaters DBA <i class="fas fa-arrow-down ms-2"></i></h3>
                 <div class="row g-3">
         `;
-        low3.forEach(debater => {
+        finalLow3.forEach(debater => {
             html += `
                 <div class="col-md-4">
                     <div class="card shadow h-100 animate__animated animate__fadeInUp" role="button" aria-label="View ${debater.name}'s profile" onclick="window.location.hash='#profile/${debater.id}'">
                         <div class="card-body">
                             <h4 class="card-title">${debater.name} <img src="${debater.flag}" width="24" class="ms-2" alt="${debater.country_code}"/></h4>
-                            <p class="card-text">Record: <span class="badge ${debater.wins > debater.losses ? 'bg-danger' : 'bg-success'}">${debater.record}</span></p>
-                        </div>
+                            <p class="card-text">Record: <span class="badge bg-danger">${debater.record}</span></p> </div>
                     </div>
                 </div>
             `;
