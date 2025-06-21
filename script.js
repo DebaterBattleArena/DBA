@@ -434,12 +434,21 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         const top3 = topSortedDebaters.slice(0, 3);
         
-        // Sort debaters for 'Low' records: lowest win rate, then more matches (to prioritize 0-1 over 0-0)
+        // Sort debaters for 'Low' records:
+        // 1. Lowest Win Rate (Ascending)
+        // 2. If Win Rates are equal: Lowest Total Matches (Ascending) - This makes 0-0 "worse" than 0-1
+        // 3. If Total Matches are also equal: More Losses (Descending) - This makes 0-2 "worse" than 0-1
         const lowSortedDebaters = [...debaters].sort((a, b) => {
             const winRateA = (a.wins + a.losses) > 0 ? a.wins / (a.wins + a.losses) : 0;
             const winRateB = (b.wins + b.losses) > 0 ? b.wins / (b.wins + b.losses) : 0;
+
             if (winRateA !== winRateB) return winRateA - winRateB; // Lower win rate first
-            return (b.wins + b.losses) - (a.wins + a.losses); // More matches first for ties in low win rate (e.g., 0-1 before 0-0)
+
+            const totalMatchesA = a.wins + a.losses;
+            const totalMatchesB = b.wins + b.losses;
+            if (totalMatchesA !== totalMatchesB) return totalMatchesA - totalMatchesB; // Fewer matches first (e.g., 0-0 before 0-1)
+
+            return b.losses - a.losses; // More losses first for ties
         });
 
         // Collect the lowest 3 unique debaters, ensuring they are not already in top3
@@ -453,7 +462,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 count++;
             }
         }
-        // No need to reverse finalLow3 here as lowSortedDebaters is already ordered from worst to better within low tier
 
         let html = `
             <div class="col-md-6">
@@ -743,7 +751,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="col-md-6 animate__animated animate__fadeInUp">
                         <div class="card shadow ${cardClass}">
                             <div class="card-body d-flex align-items-center">
-                                <img src="${debater.photo}" class="me-3 rounded debater-thumbnail" alt="${debater.name}" loading="lazy">
+                                <img src="${debater.photo}" width="50" class="rounded-circle me-3" alt="${debater.name}">
                                 <div class="flex-grow-1">
                                     <h5 class="fw-bold">${debater.name} <img src="${debater.flag}" width="20" class="ms-1 flag-icon" alt="${debater.country_code}"></h5>
                                     <p class="mb-1">Record: <span class="badge ${debater.wins > debater.losses ? 'bg-success' : 'bg-danger'}">${debater.record}</span></p>
