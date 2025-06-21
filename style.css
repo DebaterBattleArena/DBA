@@ -247,8 +247,8 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .debater-profile .card-img-top.profile-avatar {
-    width: 80px; /* Diperkecil dari 150px/100px */
-    height: 80px; /* Diperkecil dari 150px/100px */
+    width: 60px; /* Diperkecil menjadi 60px */
+    height: 60px; /* Diperkecil menjadi 60px */
     border-radius: 50%;
     object-fit: cover;
     margin: 20px auto 10px auto;
