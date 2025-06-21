@@ -1120,3 +1120,4 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initial route load
     router();
 });
+.
