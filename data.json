@@ -153,7 +153,10 @@
         "Tiering System": 4.3,
         "Calculations": 3.6,
         "Philosophy": 3,
-        "General Knowledge": 
+        "General Knowledge": 6
+      }
+    }
+  ],
   "matches": [
     {
       "id": "match1",
@@ -165,7 +168,7 @@
       "winner": "Zogratis",
       "method": "Decision Point",
       "date": "2025-06-15",
-      "event": "Weekly Showdown"
+      "event": "Indonesia vs Malaysia I"
     },
     {
       "id": "match2",
@@ -177,7 +180,7 @@
       "winner": "Aryanwt",
       "method": "Decision Point",
       "date": "2025-06-10",
-      "event": "Mid-Season Clash"
+      "event": "Indonesia vs Malaysia I"
     },
     {
       "id": "match3",
@@ -189,7 +192,7 @@
       "winner": "Hiroo",
       "method": "Limit Turn",
       "date": "2025-06-05",
-      "event": "Opening Battle"
+      "event": "Indonesia vs Malaysia I"
     }
   ]
 }
