@@ -1,4 +1,4 @@
-const debaterData = {
+{
   "debaters": [
     {
       "id": "hiroo",
@@ -163,8 +163,16 @@ const debaterData = {
       "image": "https://placehold.co/400x200/4682B4/ffffff?text=Match+1",
       "country1_flag": "🇮🇩",
       "country2_flag": "🇲🇾",
-      "debater1": { "id": "zogratis", "name": "Zogratis", "character": "Ohmazio" },
-      "debater2": { "id": "muchibei", "name": "Muchibei", "character": "Unicron" },
+      "debater1": {
+        "id": "zogratis",
+        "name": "Zogratis",
+        "character": "Ohmazio"
+      },
+      "debater2": {
+        "id": "muchibei",
+        "name": "Muchibei",
+        "character": "Unicron"
+      },
       "winner": "Zogratis",
       "method": "Decision Point",
       "date": "2025-06-15",
@@ -175,8 +183,16 @@ const debaterData = {
       "image": "https://placehold.co/400x200/DA70D6/ffffff?text=Match+2",
       "country1_flag": "🇮🇩",
       "country2_flag": "🇲🇾",
-      "debater1": { "id": "aryanwt", "name": "Aryanwt", "character": "Ha Dowan" },
-      "debater2": { "id": "rim", "name": "Rim", "character": "Izuru" },
+      "debater1": {
+        "id": "aryanwt",
+        "name": "Aryanwt",
+        "character": "Ha Dowan"
+      },
+      "debater2": {
+        "id": "rim",
+        "name": "Rim",
+        "character": "Izuru"
+      },
       "winner": "Aryanwt",
       "method": "Decision Point",
       "date": "2025-06-10",
@@ -187,12 +203,20 @@ const debaterData = {
       "image": "https://placehold.co/400x200/3CB371/ffffff?text=Match+3",
       "country1_flag": "🇮🇩",
       "country2_flag": "🇲🇾",
-      "debater1": { "id": "hiroo", "name": "Hiroo", "character": "Jaehwan" },
-      "debater2": { "id": "renji", "name": "Renji", "character": "Sukuna" },
+      "debater1": {
+        "id": "hiroo",
+        "name": "Hiroo",
+        "character": "Jaehwan"
+      },
+      "debater2": {
+        "id": "renji",
+        "name": "Renji",
+        "character": "Sukuna"
+      },
       "winner": "Hiroo",
       "method": "Limit Turn",
       "date": "2025-06-05",
       "event": "Indonesia vs Malaysia I"
     }
   ]
-};
+}
