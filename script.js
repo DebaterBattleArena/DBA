@@ -5,6 +5,35 @@ document.addEventListener('DOMContentLoaded', () => {
     let comparisonChartInstance = null; // To store Chart.js instance for destruction
     let overallStatsChartInstance = null; // To store Chart.js instance for overall stats chart
 
+    // Define recent match data as requested by the user
+    const recentMatchData = [
+        {
+            id: 'recent-match-1',
+            image: '4ba98405-9174-4806-86b0-48db675ff249.jpeg',
+            debater1: { name: 'Hiroo', country: 'Indonesia', status: 'Winner' },
+            debater2: { name: 'Renji', country: 'Malaysia', status: 'Loss' }
+        },
+        {
+            id: 'recent-match-2',
+            image: '5c6e6c7b-dc86-4ca3-a496-6b0d34eefa77.jpeg',
+            debater1: { name: 'Zogratis', country: 'Indonesia', status: 'Winner' },
+            debater2: { name: 'Muchibei', country: 'Malaysia', status: 'Loss' }
+        },
+        {
+            id: 'recent-match-3',
+            image: '16f4edc9-df34-4106-aa40-cecc9f3ad6e8.jpeg',
+            debater1: { name: 'Aryanwt', country: 'Indonesia', status: 'Winner' },
+            debater2: { name: 'Rim', country: 'Malaysia', status: 'Loss' }
+        }
+    ];
+
+    // Map country names to flag emojis
+    const countryFlags = {
+        'Indonesia': '🇮🇩',
+        'Malaysia': '🇲🇾'
+        // Add more countries as needed
+    };
+
     // --- Utility Functions ---
 
     /**
@@ -92,8 +121,8 @@ document.addEventListener('DOMContentLoaded', () => {
      */
     window.onImageError = function(imgElement) { // Made global to be accessible from inline onerror
         imgElement.onerror = null; // Prevent infinite loop if fallback also fails
-        imgElement.src = 'assets/default_avatar.png'; // Path to a default avatar image
-        imgElement.alt = 'Default Avatar';
+        imgElement.src = 'https://placehold.co/1280x720/CCCCCC/000000?text=Image+Not+Available'; // Path to a default placeholder
+        imgElement.alt = 'Default Image';
         console.warn(`Image failed to load: ${imgElement.src}, replacing with default.`); // For debugging
     };
 
@@ -109,6 +138,15 @@ document.addEventListener('DOMContentLoaded', () => {
             <div class="hero-image-container animate__animated animate__fadeIn">
               <img src="7745A053-1315-4B4D-AB24-9BFB05370A20.jpeg" alt="Debater Battle Arena Hero Image" loading="lazy" onerror="onImageError(this)">
             </div>
+
+            <section class="container my-5">
+              <h2 class="text-center mb-4 fw-bold text-uppercase animate__animated animate__fadeInDown">Recent Matches <i class="fas fa-history ms-2"></i></h2>
+              <div id="recentMatchesSection" class="row g-4">
+                <!-- Recent matches will be rendered here -->
+              </div>
+            </section>
+
+            <hr class="my-5">
 
             <section class="container my-5">
               <h2 class="text-center mb-4 fw-bold text-uppercase animate__animated animate__fadeInDown">Top & Low Record Debaters <i class="fas fa-chart-line ms-2"></i></h2>
@@ -229,12 +267,12 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
         setAppContent(homePageHtml);
 
+        renderRecentMatches(recentMatchData); // Render the new recent matches section
         renderTopLowRecords(debaters);
         renderQuickViewProfiles(debaters);
         renderDetailedProfiles(debaters); // Call to render all detailed profiles
         renderLeaderboard(debaters); // Initial call
         renderOverallStatsChart(debaters); // Render chart
-        // renderRecentMatches(matches); // Removed as per request
         renderIndividualMatchHistory(debaters, matches); // Re-added
 
         // Re-attach event listeners as DOM elements are newly created
@@ -496,6 +534,50 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- Specific Section Renderers (used by renderHomePage) ---
+
+    /**
+     * Renders the Recent Matches section.
+     * @param {Array<Object>} matches - Array of recent match data.
+     */
+    function renderRecentMatches(matches) {
+        const recentMatchesSection = document.getElementById('recentMatchesSection');
+        if (!recentMatchesSection) return;
+
+        let html = '';
+        if (matches.length > 0) {
+            matches.forEach(match => {
+                const debater1Flag = countryFlags[match.debater1.country] || '';
+                const debater2Flag = countryFlags[match.debater2.country] || '';
+                const debater1StatusClass = match.debater1.status === 'Winner' ? 'text-success' : 'text-danger';
+                const debater2StatusClass = match.debater2.status === 'Winner' ? 'text-success' : 'text-danger';
+
+                // Use placeholder.co for image UUIDs as they are not actual image URLs
+                const imageUrl = `https://placehold.co/1280x720/000000/FFFFFF?text=${encodeURIComponent(match.image)}`;
+
+                html += `
+                    <div class="col-12 col-md-6 col-lg-4 animate__animated animate__fadeInUp">
+                        <div class="card shadow h-100 recent-match-card">
+                            <img src="${imageUrl}" class="card-img-top recent-match-img" alt="Match between ${match.debater1.name} and ${match.debater2.name}" loading="lazy" onerror="onImageError(this)">
+                            <div class="card-body text-center">
+                                <h5 class="card-title fw-bold">
+                                    <span class="${debater1StatusClass}">${match.debater1.name} ${debater1Flag} ${match.debater1.status}</span> vs
+                                    <span class="${debater2StatusClass}">${match.deb2.name} ${debater2Flag} ${match.debater2.status}</span>
+                                </h5>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+        } else {
+            html = `
+                <div class="col-12 text-center text-muted animate__animated animate__fadeIn">
+                    <p><i class="fas fa-info-circle me-2"></i> No recent matches to display.</p>
+                </div>
+            `;
+        }
+        recentMatchesSection.innerHTML = html;
+    }
+
 
     /**
      * Renders the top and low record debaters section.
@@ -1017,12 +1099,12 @@ document.addEventListener('DOMContentLoaded', () => {
                             <div class="card-header bg-dark text-white d-flex align-items-center">
                                 <img src="${debaterPhoto}" width="40" height="40" class="rounded-circle me-2 object-fit-cover" alt="${debaterName}" onerror="onImageError(this)">
                                 <h5 class="mb-0 flex-grow-1">${debaterName}'s Latest Matches</h5>
-                                <a href="#profile/${debater.id}" class="btn btn-sm btn-outline-light ms-auto">View All</a>
+                                <!-- Removed "View All" button as requested -->
                             </div>
                             <ul class="list-group list-group-flush">
                 `;
                 debaterMatches.forEach(match => {
-                    const opponentMatchData = match.debater1?.id === debater.id ? match.debater2 : match.debater1;
+                    const opponentMatchData = match.debater1?.id === debater.id ? match.debater1 : match.debater2;
                     const opponentId = opponentMatchData?.id;
                     const opponentFullData = allDebatersData.find(d => d.id === opponentId);
 
