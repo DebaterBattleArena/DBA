@@ -6,31 +6,34 @@ document.addEventListener('DOMContentLoaded', () => {
     let overallStatsChartInstance = null; // To store Chart.js instance for overall stats chart
 
     // Define recent match data as requested by the user
+    // NOTE: Image paths look like UUIDs, assuming they are placeholders or need conversion to actual URLs.
+    // For demonstration, I'm modifying them to show placeholder.co images.
+    // If they are actual image paths, ensure they are correct relative to your HTML or absolute URLs.
     const recentMatchData = [
         {
             id: 'recent-match-1',
             image: '4ba98405-9174-4806-86b0-48db675ff249.jpeg',
-            debater1: { name: 'Hiroo', country: 'Indonesia', status: 'Winner' },
-            debater2: { name: 'Renji', country: 'Malaysia', status: 'Loss' }
+            debater1: { name: 'Hiroo', country: 'Indonesia', status: 'Winner', id: 'debater-hiroo' }, // Added ID for consistency
+            debater2: { name: 'Renji', country: 'Malaysia', status: 'Loss', id: 'debater-renji' }
         },
         {
             id: 'recent-match-2',
             image: '5c6e6c7b-dc86-4ca3-a496-6b0d34eefa77.jpeg',
-            debater1: { name: 'Zogratis', country: 'Indonesia', status: 'Winner' },
-            debater2: { name: 'Muchibei', country: 'Malaysia', status: 'Loss' }
+            debater1: { name: 'Zogratis', country: 'Indonesia', status: 'Winner', id: 'debater-zogratis' },
+            debater2: { name: 'Muchibei', country: 'Malaysia', status: 'Loss', id: 'debater-muchibei' }
         },
         {
             id: 'recent-match-3',
             image: '16f4edc9-df34-4106-aa40-cecc9f3ad6e8.jpeg',
-            debater1: { name: 'Aryanwt', country: 'Indonesia', status: 'Winner' },
-            debater2: { name: 'Rim', country: 'Malaysia', status: 'Loss' }
+            debater1: { name: 'Aryanwt', country: 'Indonesia', status: 'Winner', id: 'debater-aryanwt' },
+            debater2: { name: 'Rim', country: 'Malaysia', status: 'Loss', id: 'debater-rim' }
         }
     ];
 
     // Map country names to flag emojis
     const countryFlags = {
         'Indonesia': '🇮🇩',
-        'Malaysia': '🇲🇾'
+        'Malaysia': '🇲🇾',
         // Add more countries as needed
     };
 
@@ -142,8 +145,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <section class="container my-5">
               <h2 class="text-center mb-4 fw-bold text-uppercase animate__animated animate__fadeInDown">Recent Matches <i class="fas fa-history ms-2"></i></h2>
               <div id="recentMatchesSection" class="row g-4">
-                <!-- Recent matches will be rendered here -->
-              </div>
+                </div>
             </section>
 
             <hr class="my-5">
@@ -387,6 +389,11 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
         setAppContent(profilePageHtml);
 
+        // Destroy existing chart instance before creating a new one
+        if (typeof Chart !== 'undefined' && Chart.getChart('radarChart')) {
+            Chart.getChart('radarChart').destroy();
+        }
+
         // Render Radar Chart
         const radarChartCtx = document.getElementById('radarChart');
         if (radarChartCtx && metricScores.length > 0) { // Only render if there's data
@@ -551,8 +558,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const debater1StatusClass = match.debater1.status === 'Winner' ? 'text-success' : 'text-danger';
                 const debater2StatusClass = match.debater2.status === 'Winner' ? 'text-success' : 'text-danger';
 
-                // Use placeholder.co for image UUIDs as they are not actual image URLs
-                const imageUrl = `https://placehold.co/1280x720/000000/FFFFFF?text=${encodeURIComponent(match.image)}`;
+                // Construct a placeholder URL for the image UUIDs
+                const imageUrl = `https://placehold.co/1280x720/000000/FFFFFF?text=${encodeURIComponent(match.image.split('.')[0])}`; // Use only the UUID part
 
                 html += `
                     <div class="col-12 col-md-6 col-lg-4 animate__animated animate__fadeInUp">
@@ -561,7 +568,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <div class="card-body text-center">
                                 <h5 class="card-title fw-bold">
                                     <span class="${debater1StatusClass}">${match.debater1.name} ${debater1Flag} ${match.debater1.status}</span> vs
-                                    <span class="${debater2StatusClass}">${match.deb2.name} ${debater2Flag} ${match.debater2.status}</span>
+                                    <span class="${debater2StatusClass}">${match.debater2.name} ${debater2Flag} ${match.debater2.status}</span>
                                 </h5>
                             </div>
                         </div>
@@ -587,8 +594,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const topLowRecordsSection = document.getElementById('topLowRecordsSection');
         if (!topLowRecordsSection) return;
 
+        // Filter out debaters with no matches or incomplete data before sorting
+        const validDebaters = debaters.filter(d => (d.wins !== undefined && d.losses !== undefined && ((d.wins || 0) + (d.losses || 0)) > 0));
+
         // Sort debaters by win rate, then by total matches (descending)
-        const sortedDebaters = [...debaters].sort((a, b) => {
+        const sortedDebaters = [...validDebaters].sort((a, b) => {
             const totalMatchesA = (a.wins || 0) + (a.losses || 0);
             const totalMatchesB = (b.wins || 0) + (b.losses || 0);
 
@@ -600,10 +610,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         const top3 = sortedDebaters.slice(0, 3);
-        // Ensure low3 are distinct from top3 and truly represent the lowest performers
-        // Filter out debaters with 0 total matches from the low record calculation unless explicitly desired
-        const low3Candidates = [...debaters]
-            .filter(d => ((d.wins || 0) + (d.losses || 0)) > 0 && !top3.some(t => t.id === d.id)) // Ensure some matches and not already in top3
+
+        // To get low3, sort in ascending order by win rate, ensuring they are not in top3
+        const low3Candidates = [...validDebaters]
+            .filter(d => !top3.some(t => t.id === d.id)) // Exclude those already in top3
             .sort((a, b) => {
                 const totalMatchesA = (a.wins || 0) + (a.losses || 0);
                 const totalMatchesB = (b.wins || 0) + (b.losses || 0);
@@ -1099,12 +1109,11 @@ document.addEventListener('DOMContentLoaded', () => {
                             <div class="card-header bg-dark text-white d-flex align-items-center">
                                 <img src="${debaterPhoto}" width="40" height="40" class="rounded-circle me-2 object-fit-cover" alt="${debaterName}" onerror="onImageError(this)">
                                 <h5 class="mb-0 flex-grow-1">${debaterName}'s Latest Matches</h5>
-                                <!-- Removed "View All" button as requested -->
                             </div>
                             <ul class="list-group list-group-flush">
                 `;
                 debaterMatches.forEach(match => {
-                    const opponentMatchData = match.debater1?.id === debater.id ? match.debater1 : match.debater2;
+                    const opponentMatchData = match.debater1?.id === debater.id ? match.debater2 : match.debater1;
                     const opponentId = opponentMatchData?.id;
                     const opponentFullData = allDebatersData.find(d => d.id === opponentId);
 
@@ -1140,19 +1149,37 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Event Listeners and Routing ---
 
+    // Moved handleLeaderboardSort out of attachHomePageEventListeners to prevent re-declaration issues
+    function handleLeaderboardSort(event) {
+        const header = event.target.closest('th[data-sort]');
+        if (header) {
+            const column = header.dataset.sort;
+            let order = 'asc';
+            if (currentLeaderboardSort.column === column) {
+                order = currentLeaderboardSort.order === 'asc' ? 'desc' : 'asc';
+            }
+            currentLeaderboardSort = { column, order };
+            renderLeaderboard(allDebatersData); // Use global allDebatersData
+        }
+    }
+
     /**
      * Attaches event listeners for elements on the home page.
      * @param {Array<Object>} debaters - Array of debater data.
      * @param {Array<Object>} matches - Array of match data.
      */
     function attachHomePageEventListeners(debaters, matches) {
-        // Debater Profile Search input is removed, so no listener needed here.
-
         // Leaderboard Filters & Search
         const leaderboardSearch = document.getElementById('leaderboardSearch');
         const tierFilter = document.getElementById('tierFilter');
         const countryFilter = document.getElementById('countryFilter');
 
+        // Remove old listeners to prevent multiple triggers
+        if (leaderboardSearch) leaderboardSearch.removeEventListener('input', () => renderLeaderboard(debaters));
+        if (tierFilter) tierFilter.removeEventListener('change', () => renderLeaderboard(debaters));
+        if (countryFilter) countryFilter.removeEventListener('change', () => renderLeaderboard(debaters));
+
+        // Add new listeners
         if (leaderboardSearch) {
             leaderboardSearch.addEventListener('input', () => renderLeaderboard(debaters));
         }
@@ -1168,19 +1195,6 @@ document.addEventListener('DOMContentLoaded', () => {
             thead.removeEventListener('click', handleLeaderboardSort); // Remove old listener to prevent duplicates
             thead.addEventListener('click', handleLeaderboardSort);
         });
-
-        function handleLeaderboardSort(event) {
-            const header = event.target.closest('th[data-sort]');
-            if (header) {
-                const column = header.dataset.sort;
-                let order = 'asc';
-                if (currentLeaderboardSort.column === column) {
-                    order = currentLeaderboardSort.order === 'asc' ? 'desc' : 'asc';
-                }
-                currentLeaderboardSort = { column, order };
-                renderLeaderboard(debaters);
-            }
-        }
 
         // Ensure Chart.js instances are destroyed before re-rendering new ones
         if (overallStatsChartInstance) {
@@ -1204,10 +1218,13 @@ document.addEventListener('DOMContentLoaded', () => {
             compareDebaters(id1, id2, debaters);
         };
 
+        // Remove old listeners before adding new ones
         if (debaterSelect1) {
+            debaterSelect1.removeEventListener('change', updateComparison);
             debaterSelect1.addEventListener('change', updateComparison);
         }
         if (debaterSelect2) {
+            debaterSelect2.removeEventListener('change', updateComparison);
             debaterSelect2.addEventListener('change', updateComparison);
         }
     }
@@ -1432,6 +1449,8 @@ document.addEventListener('DOMContentLoaded', () => {
         // Add event listener for navigation links
         document.querySelectorAll('.navbar-nav .nav-link').forEach(link => {
             link.addEventListener('click', (event) => {
+                // Prevent default anchor link behavior
+                event.preventDefault();
                 const targetHash = event.target.getAttribute('href');
                 if (targetHash) {
                     window.location.hash = targetHash;
