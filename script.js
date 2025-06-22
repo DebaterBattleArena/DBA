@@ -2,7 +2,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let allDebatersData = [];
     let allMatchesData = [];
     let currentLeaderboardSort = { column: 'rank', order: 'asc' }; // Default sort for leaderboard
-    let comparisonChartInstance = null; // To store Chart.js instance for destruction
     let overallStatsChartInstance = null; // To store Chart.js instance for overall stats chart
 
     // Data pertandingan terbaru yang diminta pengguna
@@ -197,185 +196,37 @@ document.addEventListener('DOMContentLoaded', () => {
         attachHomePageEventListeners(debaters); // matches tidak diperlukan di sini
     }
 
+    // Fungsi renderProfilePage dan renderComparePage Dihilangkan
+    // Atau bisa juga dikosongkan jika Anda ingin menjaga strukturnya.
+    /*
     function renderProfilePage(debaterId, debaters, matches) {
-        const debater = debaters.find(d => d.id === debaterId);
-
-        if (!debater) {
-            setAppContent(`
-                <div class="container my-5 text-center text-danger animate__animated animate__fadeIn">
-                    <i class="fas fa-user-times fa-3x mb-3"></i>
-                    <h2>Debater Tidak Ditemukan!</h2>
-                    <a href="#home" class="btn btn-primary mt-3"><i class="fas fa-arrow-left me-2"></i> Kembali ke Beranda</a>
-                </div>
-            `);
-            document.title = 'DBA - Tidak Ditemukan';
-            return;
-        }
-
-        document.title = `DBA - ${debater.name || 'Debater Tidak Dikenal'}'s Profile`;
-
-        let metricsHtml = '';
-        const metricLabels = [];
-        const metricScores = [];
-        if (debater.metrics && typeof debater.metrics === 'object') {
-            for (const [metricName, metricScore] of Object.entries(debater.metrics)) {
-                const scoreValue = parseFloat(metricScore);
-                const widthPercentage = (isNaN(scoreValue) || scoreValue < 0) ? 0 : (scoreValue / 10) * 100;
-                metricsHtml += `
-                    <div class="profile-metric d-flex align-items-center mb-2">
-                        <span class="me-2 text-capitalize">${metricName.replace(/([A-Z])/g, ' $1').trim()}:</span>
-                        <div class="progress flex-grow-1">
-                            <div class="progress-bar bg-info" style="width: ${widthPercentage}%;"></div>
-                        </div>
-                        <span class="metric-value ms-2">${isNaN(scoreValue) ? 'N/A' : `${scoreValue}/10`}</span>
-                    </div>
-                `;
-                if (!isNaN(scoreValue)) {
-                    metricLabels.push(metricName.replace(/([A-Z])/g, ' $1').trim());
-                    metricScores.push(scoreValue);
-                }
-            }
-        } else {
-            metricsHtml = `<p class="text-muted text-center">Tidak ada data metrik tersedia.</p>`;
-        }
-
-        const totalWinsLosses = (debater.wins || 0) + (debater.losses || 0);
-        const winRate = totalWinsLosses > 0 ? (((debater.wins || 0) / totalWinsLosses) * 100).toFixed(2) : '0.00';
-
-        const profilePageHtml = `
-            <section class="container my-5">
-                <div class="row justify-content-center">
-                    <div class="col-lg-8">
-                        <div class="card shadow p-4 animate__animated animate__fadeIn">
-                            <div class="text-center">
-                                <img src="${debater.photo || 'assets/default_avatar.png'}" class="profile-avatar mb-3 animate__animated animate__zoomIn" alt="${debater.name || 'Unknown Debater'} Profile Photo" onerror="onImageError(this)">
-                                <h2 class="profile-name animate__animated animate__fadeInDown">${debater.name || 'Unknown Debater'} ${debater.flag ? `<img src="${debater.flag}" width="30" class="ms-2" alt="${debater.country_code || 'XX'} flag"/>` : ''}</h2>
-                                <p class="profile-record animate__animated animate__fadeIn">Record: <span class="badge ${debater.wins > debater.losses ? 'bg-success' : 'bg-danger'}">${debater.record || '0-0'}</span></p>
-                                <p class="text-muted">Win Rate: ${winRate}% | Total Matches: ${totalWinsLosses}</p>
-                            </div>
-                            <hr class="my-4">
-                            <div class="profile-metrics mb-4 animate__animated animate__fadeInUp">
-                                <h4 class="text-center mb-3">Key Metrics <i class="fas fa-chart-bar ms-2"></i></h4>
-                                <div class="row">
-                                    <div class="col-md-8 mx-auto">
-                                        ${metricsHtml}
-                                        ${metricScores.length > 0 ? `<canvas id="radarChart" height="250"></canvas>` : `<p class="text-muted text-center mt-3">Tidak ada data untuk grafik.</p>`}
-                                    </div>
-                                </div>
-                            </div>
-                            <hr class="my-4">
-                            <div class="profile-detail animate__animated animate__fadeInUp">
-                                <h4 class="text-center mb-3">About ${debater.name || 'Unknown Debater'} <i class="fas fa-info-circle ms-2"></i></h4>
-                                <p><strong>Country:</strong> ${debater.country || 'Unknown'}</p>
-                                <p><strong>Favorite Character:</strong> ${debater.character || 'Unknown'}</p>
-                                <p><strong>Bio:</strong> ${debater.bio || 'Tidak ada biografi tersedia.'}</p>
-                            </div>
-                            <hr class="my-4">
-                            <h4 class="text-center mb-3 animate__animated animate__fadeInUp">Match History <i class="fas fa-fist-raised ms-2"></i></h4>
-                            <div class="row g-3 profile-match-history" id="individualFullMatchHistory"></div>
-                            <div class="text-center mt-4">
-                                <a href="#home" class="btn btn-outline-primary"><i class="fas fa-arrow-left me-2"></i> Kembali ke Beranda</a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-        `;
-        setAppContent(profilePageHtml);
-
-        if (typeof Chart !== 'undefined' && Chart.getChart('radarChart')) {
-            Chart.getChart('radarChart').destroy();
-        }
-        const radarChartCtx = document.getElementById('radarChart');
-        if (radarChartCtx && metricScores.length > 0) {
-            new Chart(radarChartCtx, {
-                type: 'radar',
-                data: {
-                    labels: metricLabels,
-                    datasets: [{
-                        label: 'Debater Metrics',
-                        data: metricScores,
-                        backgroundColor: 'rgba(13, 110, 253, 0.2)',
-                        borderColor: 'rgba(13, 110, 253, 1)',
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: { r: { suggestedMin: 0, suggestedMax: 10, ticks: { stepSize: 2 } } },
-                    plugins: { legend: { display: false } }
-                }
-            });
-        }
-
-        const individualFullMatchHistorySection = document.getElementById('individualFullMatchHistory');
-        if (individualFullMatchHistorySection) {
-            const debaterMatches = matches.filter(match =>
-                match.debater1?.id === debater.id || match.debater2?.id === debater.id
-            ).sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
-
-            let matchesHtml = '';
-            if (debaterMatches.length > 0) {
-                debaterMatches.forEach(match => {
-                    const opponentMatchData = match.debater1?.id === debater.id ? match.debater2 : match.debater1;
-                    const opponentFullData = allDebatersData.find(d => d.id === opponentMatchData?.id);
-                    const isWinner = match.winner === debater.name;
-                    const statusBadgeClass = isWinner ? 'bg-success' : 'bg-danger';
-                    const statusText = isWinner ? 'MENANG' : 'KALAH';
-
-                    matchesHtml += `
-                        <div class="col-12">
-                            <div class="card shadow p-3 mb-2 d-flex flex-row align-items-center ${isWinner ? 'win-card' : 'loss-card'} animate__animated animate__fadeIn">
-                                <img src="${debater.photo || 'assets/default_avatar.png'}" width="50" height="50" class="rounded-circle me-3 object-fit-cover" alt="${debater.name}" onerror="onImageError(this)">
-                                <div class="flex-grow-1">
-                                    <h6 class="mb-1 fw-bold">${debater.name} <span class="badge ${statusBadgeClass}">${statusText}</span> vs <a href="#profile/${opponentMatchData?.id || ''}" class="text-decoration-none">${opponentFullData?.name || 'Unknown Opponent'}</a></h6>
-                                    <small class="text-muted">Metode: ${match.method || 'N/A'} - Tanggal: ${new Date(match.date || '').toLocaleDateString('en-US')}</small>
-                                </div>
-                                <img src="${opponentFullData?.photo || 'assets/default_avatar.png'}" width="50" height="50" class="rounded-circle ms-3 object-fit-cover" alt="${opponentFullData?.name || 'Unknown Opponent'}" onerror="onImageError(this)">
-                            </div>
-                        </div>
-                    `;
-                });
-            } else {
-                matchesHtml = `<div class="col-12"><p class="text-center text-muted">Tidak ada riwayat pertandingan.</p></div>`;
-            }
-            individualFullMatchHistorySection.innerHTML = matchesHtml;
-        }
+        // Konten dikosongkan karena fitur dihilangkan
+        setAppContent(`
+            <div class="container my-5 text-center text-info animate__animated animate__fadeIn">
+                <i class="fas fa-ban fa-3x mb-3"></i>
+                <h2>Fitur Detail Profil Dinonaktifkan</h2>
+                <a href="#home" class="btn btn-primary mt-3"><i class="fas fa-arrow-left me-2"></i> Kembali ke Beranda</a>
+            </div>
+        `);
+        document.title = 'DBA - Fitur Dinonaktifkan';
     }
 
     function renderComparePage(debaters) {
-        document.title = 'DBA - Bandingkan Debater';
-        const comparePageHtml = `
+        // Konten dikosongkan karena fitur dihilangkan
+        document.title = 'DBA - Fitur Dinonaktifkan';
+        setAppContent(`
             <section class="container my-5 animate__animated animate__fadeIn">
                 <h2 class="text-center mb-4 fw-bold text-uppercase">Bandingkan Debater <i class="fas fa-balance-scale-right ms-2"></i></h2>
-                <div class="row justify-content-center mb-4">
-                    <div class="col-md-5">
-                        <select class="form-select mb-2" id="debaterSelect1">
-                            <option value="">Pilih Debater 1</option>
-                            ${debaters.map(d => `<option value="${d.id}">${d.name || 'Unknown Debater'}</option>`).join('')}
-                        </select>
-                    </div>
-                    <div class="col-md-1 d-flex align-items-center justify-content-center">
-                        <i class="fas fa-times vs-icon fs-3 text-secondary"></i>
-                    </div>
-                    <div class="col-md-5">
-                        <select class="form-select mb-2" id="debaterSelect2">
-                            <option value="">Pilih Debater 2</option>
-                            ${debaters.map(d => `<option value="${d.id}">${d.name || 'Unknown Debater'}</option>`).join('')}
-                        </select>
-                    </div>
-                </div>
-                <div class="row" id="comparisonResults">
-                    <div class="col-12 text-center text-muted">
-                        <p><i class="fas fa-info-circle me-2"></i> Pilih dua debater berbeda di atas untuk membandingkan.</p>
+                <div class="row justify-content-center">
+                    <div class="col-12 text-center text-info">
+                        <p><i class="fas fa-ban me-2"></i> Fitur perbandingan debater dinonaktifkan.</p>
+                        <a href="#home" class="btn btn-primary mt-3"><i class="fas fa-arrow-left me-2"></i> Kembali ke Beranda</a>
                     </div>
                 </div>
             </section>
-        `;
-        setAppContent(comparePageHtml);
-        attachComparePageEventListeners(debaters);
+        `);
     }
+    */
 
     // --- Renderer Bagian Spesifik ---
 
@@ -435,7 +286,7 @@ document.addEventListener('DOMContentLoaded', () => {
         top3.forEach(debater => {
             html += `
                 <div class="col-md-4">
-                    <div class="card shadow h-100 animate__animated animate__fadeInUp card-hover-effect debater-card-link" data-debater-id="${debater.id}">
+                    <div class="card shadow h-100 animate__animated animate__fadeInUp card-hover-effect">
                         <img src="${debater.photo || 'assets/default_avatar.png'}" class="card-img-top card-img-fixed-height" alt="${debater.name} photo" onerror="onImageError(this)"/>
                         <div class="card-body">
                             <h4 class="card-title">${debater.name || 'Unknown'} ${debater.flag ? `<img src="${debater.flag}" width="24" class="ms-2" alt="${debater.country_code || 'XX'} flag"/>` : ''}</h4>
@@ -455,7 +306,7 @@ document.addEventListener('DOMContentLoaded', () => {
         low3.forEach(debater => {
             html += `
                 <div class="col-md-4">
-                    <div class="card shadow h-100 animate__animated animate__fadeInUp card-hover-effect debater-card-link" data-debater-id="${debater.id}">
+                    <div class="card shadow h-100 animate__animated animate__fadeInUp card-hover-effect">
                         <img src="${debater.photo || 'assets/default_avatar.png'}" class="card-img-top card-img-fixed-height" alt="${debater.name} photo" onerror="onImageError(this)"/>
                         <div class="card-body">
                             <h4 class="card-title">${debater.name || 'Unknown'} ${debater.flag ? `<img src="${debater.flag}" width="24" class="ms-2" alt="${debater.country_code || 'XX'} flag"/>` : ''}</h4>
@@ -471,12 +322,13 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
         topLowRecordsSection.innerHTML = html;
 
-        document.querySelectorAll('.debater-card-link').forEach(card => {
-            card.addEventListener('click', () => {
-                const debaterId = card.dataset.debaterId;
-                if (debaterId) window.location.hash = `#profile/${debaterId}`;
-            });
-        });
+        // Menghapus listener yang mengarah ke halaman detail profil
+        // document.querySelectorAll('.debater-card-link').forEach(card => {
+        //     card.addEventListener('click', () => {
+        //         const debaterId = card.dataset.debaterId;
+        //         if (debaterId) window.location.hash = `#profile/${debaterId}`;
+        //     });
+        // });
     }
 
     function renderQuickViewProfiles(debaters) {
@@ -490,7 +342,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="card shadow h-100 text-center animate__animated animate__fadeInUp card-hover-effect">
                         <img src="${debater.photo || 'assets/default_avatar.png'}" class="card-img-top card-img-fixed-height" alt="${debater.name} photo" onerror="onImageError(this)"/>
                         <div class="card-body">
-                            <h3 data-debater-id="${debater.id}" class="clickable-name">${debater.name || 'Unknown'} ${debater.flag ? `<img src="${debater.flag}" width="24" class="ms-2" alt="${debater.country_code || 'XX'} flag"/>` : ''}</h3>
+                            <h3 data-debater-id="${debater.id}">${debater.name || 'Unknown'} ${debater.flag ? `<img src="${debater.flag}" width="24" class="ms-2" alt="${debater.country_code || 'XX'} flag"/>` : ''}</h3>
                             <p class="card-text">Record: <span class="badge ${debater.wins > debater.losses ? 'bg-success' : 'bg-danger'}">${debater.record || '0-0'}</span></p>
                             <p><strong>Karakter:</strong> ${debater.character || 'Unknown'}</p>
                             <p><strong>Ringkasan:</strong> ${debater.summary || 'Tidak ada ringkasan.'}</p>
@@ -501,13 +353,13 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         quickViewProfilesSection.innerHTML = html;
 
-        // Listener untuk navigasi ke halaman profil penuh
-        quickViewProfilesSection.querySelectorAll('.clickable-name').forEach(element => {
-            element.addEventListener('click', () => {
-                const debaterId = element.dataset.debaterId;
-                if (debaterId) window.location.hash = `#profile/${debaterId}`;
-            });
-        });
+        // Listener untuk navigasi ke halaman profil penuh DIHILANGKAN
+        // quickViewProfilesSection.querySelectorAll('.clickable-name').forEach(element => {
+        //     element.addEventListener('click', () => {
+        //         const debaterId = element.dataset.debaterId;
+        //         if (debaterId) window.location.hash = `#profile/${debaterId}`;
+        //     });
+        // });
     }
 
 
@@ -548,10 +400,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <h4 class="card-title">${debater.name || 'Unknown'} ${debater.flag ? `<img src="${debater.flag}" width="24" class="ms-2" alt="${debater.country_code || 'XX'} flag"/>` : ''}</h4>
                                 <p class="card-text">Record: <span class="badge ${debater.wins > debater.losses ? 'bg-success' : 'bg-danger'}">${debater.record || '0-0'}</span></p>
                                 <div class="mt-3 text-start">${metricsHtml}</div>
-                                <div class="text-center mt-3">
-                                    <a href="#profile/${debater.id}" class="btn btn-sm btn-outline-primary">Lihat Detail</a>
                                 </div>
-                            </div>
                         </div>
                     </div>
                 `;
@@ -624,8 +473,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 row.innerHTML = `
                     <td>${rankDisplay}</td>
                     <td><img src="${debater.photo || 'assets/default_avatar.png'}" width="50" height="50" class="rounded-circle object-fit-cover" alt="${debater.name}" onerror="onImageError(this)"></td>
-                    <td><a href="#profile/${debater.id}" class="text-decoration-none">${debater.name || 'Unknown'}</a></td>
-                    <td>${debater.flag ? `<img src="${debater.flag}" width="24" class="me-2" alt="${debater.country_code || 'XX'} flag"/>` : ''} ${debater.country || 'Unknown'}</td>
+                    <td>${debater.name || 'Unknown'}</td> <td>${debater.flag ? `<img src="${debater.flag}" width="24" class="me-2" alt="${debater.country_code || 'XX'} flag"/>` : ''} ${debater.country || 'Unknown'}</td>
                     <td><span class="badge ${recordClass}">${debaterWins}-${debaterLosses} (${winRate}%)</span></td>
                 `;
                 targetBody.appendChild(row);
@@ -708,7 +556,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     html += `
                         <li class="list-group-item d-flex justify-content-between align-items-center">
                             <div>
-                                <span class="badge ${statusBadgeClass}">${statusText}</span> vs <a href="#profile/${opponentMatchData?.id || ''}" class="text-decoration-none">${opponentFullData?.name || 'Unknown Opponent'}</a>
+                                <span class="badge ${statusBadgeClass}">${statusText}</span> vs ${opponentFullData?.name || 'Unknown Opponent'}
                                 <br><small class="text-muted">${match.method || 'N/A'} - ${new Date(match.date || '').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</small>
                             </div>
                             <img src="${opponentFullData?.photo || 'assets/default_avatar.png'}" width="30" height="30" class="rounded-circle object-fit-cover" alt="${opponentFullData?.name || 'Unknown Opponent'}" onerror="onImageError(this)">
@@ -766,114 +614,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // Fungsi attachComparePageEventListeners dan compareDebaters Dihilangkan
+    /*
     function attachComparePageEventListeners(debaters) {
-        const debaterSelect1 = document.getElementById('debaterSelect1');
-        const debaterSelect2 = document.getElementById('debaterSelect2');
-
-        const updateComparison = () => {
-            const id1 = debaterSelect1?.value;
-            const id2 = debaterSelect2?.value;
-            compareDebaters(id1, id2, debaters);
-        };
-
-        if (debaterSelect1) {
-            debaterSelect1.removeEventListener('change', updateComparison);
-            debaterSelect1.addEventListener('change', updateComparison);
-        }
-        if (debaterSelect2) {
-            debaterSelect2.removeEventListener('change', updateComparison);
-            debaterSelect2.addEventListener('change', updateComparison);
-        }
+        // Logika event listener perbandingan dihapus
     }
 
     function compareDebaters(id1, id2, debaters) {
-        const comparisonResults = document.getElementById('comparisonResults');
-        if (!comparisonResults) return;
-
-        if (comparisonChartInstance) {
-            comparisonChartInstance.destroy();
-            comparisonChartInstance = null;
-        }
-
-        if (!id1 || !id2 || id1 === id2) {
-            comparisonResults.innerHTML = `
-                <div class="col-12 text-center text-muted">
-                    <p><i class="fas fa-info-circle me-2"></i> Pilih dua <strong>debater berbeda</strong>.</p>
-                </div>
-            `;
-            return;
-        }
-
-        const debater1 = debaters.find(d => d.id === id1);
-        const debater2 = debaters.find(d => d.id === id2);
-
-        if (!debater1 || !debater2) {
-            comparisonResults.innerHTML = `
-                <div class="col-12 text-center text-danger">
-                    <p><i class="fas fa-exclamation-triangle me-2"></i> Satu atau kedua debater tidak ditemukan.</p>
-                </div>
-            `;
-            return;
-        }
-
-        const metrics1 = debater1.metrics && typeof debater1.metrics === 'object' ? debater1.metrics : {};
-        const metrics2 = debater2.metrics && typeof debater2.metrics === 'object' ? debater2.metrics : {};
-        const allMetricLabels = [...new Set([...Object.keys(metrics1), ...Object.keys(metrics2)])];
-        const data1 = allMetricLabels.map(label => parseFloat(metrics1[label]) || 0);
-        const data2 = allMetricLabels.map(label => parseFloat(metrics2[label]) || 0);
-
-        const totalMatches1 = (debater1.wins || 0) + (debater1.losses || 0);
-        const winRate1 = totalMatches1 > 0 ? (((debater1.wins || 0) / totalMatches1) * 100).toFixed(2) : '0.00';
-        const totalMatches2 = (debater2.wins || 0) + (debater2.losses || 0);
-        const winRate2 = totalMatches2 > 0 ? (((debater2.wins || 0) / totalMatches2) * 100).toFixed(2) : '0.00';
-
-        const compareHtml = `
-            <div class="col-md-6 text-center animate__animated animate__fadeInLeft">
-                <div class="card shadow p-3 h-100">
-                    <img src="${debater1.photo || 'assets/default_avatar.png'}" class="compare-avatar mb-3" alt="${debater1.name}" onerror="onImageError(this)">
-                    <h5>${debater1.name || 'Unknown'} ${debater1.flag ? `<img src="${debater1.flag}" width="24" class="ms-2" alt="${debater1.country_code || 'XX'} flag"/>` : ''}</h5>
-                    <p>Record: <span class="badge ${debater1.wins > debater1.losses ? 'bg-success' : 'bg-danger'}">${debater1.record || '0-0'}</span></p>
-                    <p>Win Rate: ${winRate1}% | Total Matches: ${totalMatches1}</p>
-                    <p>Karakter: ${debater1.character || 'N/A'}</p>
-                </div>
-            </div>
-            <div class="col-md-6 text-center animate__animated animate__fadeInRight">
-                <div class="card shadow p-3 h-100">
-                    <img src="${debater2.photo || 'assets/default_avatar.png'}" class="compare-avatar mb-3" alt="${debater2.name}" onerror="onImageError(this)">
-                    <h5>${debater2.name || 'Unknown'} ${debater2.flag ? `<img src="${debater2.flag}" width="24" class="ms-2" alt="${debater2.country_code || 'XX'} flag"/>` : ''}</h5>
-                    <p>Record: <span class="badge ${debater2.wins > debater2.losses ? 'bg-success' : 'bg-danger'}">${debater2.record || '0-0'}</span></p>
-                    <p>Win Rate: ${winRate2}% | Total Matches: ${totalMatches2}</p>
-                    <p>Karakter: ${debater2.character || 'N/A'}</p>
-                </div>
-            </div>
-            <div class="col-12 mt-4 animate__animated animate__fadeInUp">
-                <div class="card shadow p-4">
-                    <h4 class="text-center mb-3">Perbandingan Metrik</h4>
-                    ${allMetricLabels.length > 0 ? `<canvas id="comparisonChart" height="300"></canvas>` : `<p class="text-muted text-center">Tidak ada data metrik yang dapat dibandingkan.</p>`}
-                </div>
-            </div>
-        `;
-        comparisonResults.innerHTML = compareHtml;
-
-        const ctx = document.getElementById('comparisonChart');
-        if (ctx && allMetricLabels.length > 0) {
-            comparisonChartInstance = new Chart(ctx, {
-                type: 'radar',
-                data: {
-                    labels: allMetricLabels.map(label => label.replace(/([A-Z])/g, ' $1').trim()),
-                    datasets: [
-                        { label: debater1.name || 'Unknown Debater 1', data: data1, backgroundColor: 'rgba(13, 110, 253, 0.2)', borderColor: 'rgba(13, 110, 253, 1)', borderWidth: 1 },
-                        { label: debater2.name || 'Unknown Debater 2', data: data2, backgroundColor: 'rgba(220, 53, 69, 0.2)', borderColor: 'rgba(220, 53, 69, 1)', borderWidth: 1 }
-                    ]
-                },
-                options: {
-                    responsive: true, maintainAspectRatio: false,
-                    scales: { r: { suggestedMin: 0, suggestedMax: 10, ticks: { stepSize: 2 } } },
-                    plugins: { legend: { display: true, position: 'bottom' } }
-                }
-            });
-        }
+        // Logika perbandingan dihapus
     }
+    */
 
     async function handleLocationHash() {
         const hash = window.location.hash;
@@ -882,20 +632,15 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!data) return;
         }
 
-        if (hash.startsWith('#profile/')) {
-            const debaterId = hash.substring(9);
-            renderProfilePage(debaterId, allDebatersData, allMatchesData);
-        } else if (hash === '#compare') {
-            renderComparePage(allDebatersData);
-        } else { // Default ke beranda
-            renderHomePage(allDebatersData, allMatchesData);
-        }
+        // Hanya render halaman beranda, abaikan hash lainnya
+        renderHomePage(allDebatersData, allMatchesData);
 
         // Highlight link navigasi yang aktif
         document.querySelectorAll('.navbar-nav .nav-link').forEach(link => {
             link.classList.remove('active');
             const linkHref = link.getAttribute('href');
-            if (linkHref === hash || (hash.startsWith('#profile/') && linkHref === '#home') || (hash === '' && linkHref === '#home')) {
+            // Hanya 'home' yang akan dianggap aktif
+            if (linkHref === '#home') {
                 link.classList.add('active');
             }
         });
@@ -919,7 +664,12 @@ document.addEventListener('DOMContentLoaded', () => {
             link.addEventListener('click', (event) => {
                 event.preventDefault(); // Mencegah perilaku default anchor link
                 const targetHash = event.target.getAttribute('href');
-                if (targetHash) window.location.hash = targetHash;
+                if (targetHash && targetHash === '#home') { // Hanya izinkan navigasi ke #home
+                    window.location.hash = targetHash;
+                } else {
+                    // Jika mencoba navigasi ke hash lain (misal #compare), tetap di home
+                    window.location.hash = '#home';
+                }
             });
         });
     });
