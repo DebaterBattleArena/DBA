@@ -1,6 +1,3 @@
-import React, { useState } from 'react';
-
-// Data directly embedded into the component as per the provided JSON
 const debaterData = {
   "debaters": [
     {
@@ -8,8 +5,8 @@ const debaterData = {
       "name": "Hiroo",
       "country": "Indonesia",
       "country_code": "ID",
-      "flag": "🇮🇩", // Using emoji directly for flags
-      "photo": "https://placehold.co/100x100/A0DAA0/ffffff?text=HI", // Placeholder image
+      "flag": "🇮🇩",
+      "photo": "https://placehold.co/100x100/A0DAA0/ffffff?text=HI",
       "record": "1 - 0",
       "wins": 1,
       "losses": 0,
@@ -35,7 +32,7 @@ const debaterData = {
       "country": "Indonesia",
       "country_code": "ID",
       "flag": "🇮🇩",
-      "photo": "https://placehold.co/100x100/F08080/ffffff?text=ZO", // Placeholder image
+      "photo": "https://placehold.co/100x100/F08080/ffffff?text=ZO",
       "record": "1 - 0",
       "wins": 1,
       "losses": 0,
@@ -61,7 +58,7 @@ const debaterData = {
       "country": "Indonesia",
       "country_code": "ID",
       "flag": "🇮🇩",
-      "photo": "https://placehold.co/100x100/87CEEB/ffffff?text=AR", // Placeholder image
+      "photo": "https://placehold.co/100x100/87CEEB/ffffff?text=AR",
       "record": "1 - 0",
       "wins": 1,
       "losses": 0,
@@ -87,7 +84,7 @@ const debaterData = {
       "country": "Malaysia",
       "country_code": "MY",
       "flag": "🇲🇾",
-      "photo": "https://placehold.co/100x100/DDA0DD/ffffff?text=RE", // Placeholder image
+      "photo": "https://placehold.co/100x100/DDA0DD/ffffff?text=RE",
       "record": "0 - 1",
       "wins": 0,
       "losses": 1,
@@ -113,7 +110,7 @@ const debaterData = {
       "country": "Malaysia",
       "country_code": "MY",
       "flag": "🇲🇾",
-      "photo": "https://placehold.co/100x100/FFD700/ffffff?text=MU", // Placeholder image
+      "photo": "https://placehold.co/100x100/FFD700/ffffff?text=MU",
       "record": "0 - 1",
       "wins": 0,
       "losses": 1,
@@ -139,7 +136,7 @@ const debaterData = {
       "country": "Malaysia",
       "country_code": "MY",
       "flag": "🇲🇾",
-      "photo": "https://placehold.co/100x100/ADFF2F/ffffff?text=RI", // Placeholder image
+      "photo": "https://placehold.co/100x100/ADFF2F/ffffff?text=RI",
       "record": "0 - 1",
       "wins": 0,
       "losses": 1,
@@ -163,7 +160,7 @@ const debaterData = {
   "matches": [
     {
       "id": "match1",
-      "image": "https://placehold.co/400x200/4682B4/ffffff?text=Match+1", // Placeholder image
+      "image": "https://placehold.co/400x200/4682B4/ffffff?text=Match+1",
       "country1_flag": "🇮🇩",
       "country2_flag": "🇲🇾",
       "debater1": { "id": "zogratis", "name": "Zogratis", "character": "Ohmazio" },
@@ -175,7 +172,7 @@ const debaterData = {
     },
     {
       "id": "match2",
-      "image": "https://placehold.co/400x200/DA70D6/ffffff?text=Match+2", // Placeholder image
+      "image": "https://placehold.co/400x200/DA70D6/ffffff?text=Match+2",
       "country1_flag": "🇮🇩",
       "country2_flag": "🇲🇾",
       "debater1": { "id": "aryanwt", "name": "Aryanwt", "character": "Ha Dowan" },
@@ -187,7 +184,7 @@ const debaterData = {
     },
     {
       "id": "match3",
-      "image": "https://placehold.co/400x200/3CB371/ffffff?text=Match+3", // Placeholder image
+      "image": "https://placehold.co/400x200/3CB371/ffffff?text=Match+3",
       "country1_flag": "🇮🇩",
       "country2_flag": "🇲🇾",
       "debater1": { "id": "hiroo", "name": "Hiroo", "character": "Jaehwan" },
@@ -199,185 +196,3 @@ const debaterData = {
     }
   ]
 };
-
-// DebaterCard Component: Displays a summarized view of a debater.
-const DebaterCard = ({ debater, onClick }) => {
-  return (
-    <div
-      className="bg-white p-4 rounded-xl shadow-lg flex flex-col items-center text-center cursor-pointer transform transition-transform duration-200 hover:scale-105 hover:shadow-2xl"
-      onClick={() => onClick(debater)}
-    >
-      {/* Debater Photo */}
-      <img
-        src={debater.photo}
-        alt={debater.name}
-        className="w-24 h-24 rounded-full object-cover mb-4 border-4 border-blue-500"
-      />
-      {/* Debater Name and Flag */}
-      <h3 className="text-xl font-bold text-gray-800 mb-1 flex items-center">
-        {debater.name} <span className="ml-2 text-2xl">{debater.flag}</span>
-      </h3>
-      {/* Debater Record and Tier */}
-      <p className="text-md text-gray-600 font-semibold">{debater.record}</p>
-      <p className={`text-sm font-medium px-3 py-1 rounded-full mt-2
-        ${debater.tier === 'High Tier' ? 'bg-red-200 text-red-800' :
-          debater.tier === 'Mid Tier' ? 'bg-yellow-200 text-yellow-800' :
-          'bg-green-200 text-green-800'}`}
-      >
-        {debater.tier}
-      </p>
-      <p className="text-sm text-gray-500 mt-2 italic">{debater.summary}</p>
-    </div>
-  );
-};
-
-// DebaterDetailModal Component: Displays detailed information about a selected debater.
-const DebaterDetailModal = ({ debater, onClose }) => {
-  if (!debater) return null;
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50 overflow-auto">
-      <div className="bg-white p-6 rounded-xl shadow-2xl max-w-lg w-full transform scale-95 md:scale-100 transition-transform duration-300">
-        <button
-          onClick={onClose}
-          className="absolute top-3 right-3 text-gray-500 hover:text-gray-800 text-3xl font-bold rounded-full p-2"
-        >
-          &times; {/* Close button */}
-        </button>
-        <div className="flex flex-col items-center text-center mb-6">
-          <img
-            src={debater.photo}
-            alt={debater.name}
-            className="w-32 h-32 rounded-full object-cover mb-4 border-4 border-blue-600 shadow-md"
-          />
-          <h2 className="text-3xl font-extrabold text-gray-900 mb-2 flex items-center">
-            {debater.name} <span className="ml-3 text-4xl">{debater.flag}</span>
-          </h2>
-          <p className="text-lg text-gray-700 font-semibold mb-1">Character: {debater.character}</p>
-          <p className="text-md text-gray-600 mb-2">Record: {debater.record}</p>
-          <p className={`text-md font-bold px-4 py-1 rounded-full
-            ${debater.tier === 'High Tier' ? 'bg-red-300 text-red-900' :
-              debater.tier === 'Mid Tier' ? 'bg-yellow-300 text-yellow-900' :
-              'bg-green-300 text-green-900'}`}
-          >
-            {debater.tier}
-          </p>
-        </div>
-
-        <div className="mb-6 text-gray-800">
-          <h3 className="text-2xl font-bold mb-3 text-blue-700">Bio</h3>
-          <p className="text-md leading-relaxed">{debater.bio}</p>
-        </div>
-
-        <div className="text-gray-800">
-          <h3 className="text-2xl font-bold mb-3 text-blue-700">Metrics</h3>
-          <div className="grid grid-cols-1 gap-4">
-            {Object.entries(debater.metrics).map(([key, value]) => (
-              <div key={key} className="flex items-center">
-                <span className="font-semibold w-36 text-left">{key}:</span>
-                <div className="flex-grow bg-gray-200 rounded-full h-4">
-                  <div
-                    className="bg-blue-500 h-4 rounded-full"
-                    style={{ width: `${(value / 10) * 100}%` }} // Assuming max score is 10
-                    title={`${value}/10`}
-                  ></div>
-                </div>
-                <span className="ml-3 font-medium text-blue-600">{value}/10</span>
-              </div>
-            ))}
-          </div>
-        </div>
-        <button
-          onClick={onClose}
-          className="mt-6 w-full py-3 bg-blue-600 text-white font-bold rounded-lg shadow-md hover:bg-blue-700 transition-colors duration-200"
-        >
-          Close
-        </button>
-      </div>
-    </div>
-  );
-};
-
-// MatchCard Component: Displays a summarized view of a match.
-const MatchCard = ({ match }) => {
-  return (
-    <div className="bg-white p-4 rounded-xl shadow-lg flex flex-col text-center border border-gray-200">
-      {/* Match Image Placeholder */}
-      <img
-        src={match.image}
-        alt="Match Thumbnail"
-        className="w-full h-40 object-cover rounded-lg mb-4 border border-gray-300"
-        onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/400x200/D3D3D3/000000?text=Match'; }} // Fallback image
-      />
-      {/* Event and Date */}
-      <p className="text-sm text-gray-500 mb-2">{match.event} - {match.date}</p>
-      {/* Debaters and Flags */}
-      <div className="flex items-center justify-center gap-4 text-gray-800 font-semibold mb-3">
-        <span className="text-xl">{match.country1_flag}</span>
-        <span className="text-lg">{match.debater1.name} <span className="font-normal text-sm italic">({match.debater1.character})</span></span>
-        <span className="text-xl font-bold text-blue-600">VS</span>
-        <span className="text-lg">{match.debater2.name} <span className="font-normal text-sm italic">({match.debater2.character})</span></span>
-        <span className="text-xl">{match.country2_flag}</span>
-      </div>
-      {/* Winner and Method */}
-      <p className="text-md text-gray-700">Winner: <span className="font-bold text-green-700">{match.winner}</span></p>
-      <p className="text-md text-gray-600 mb-2">Method: <span className="font-medium text-purple-700">{match.method}</span></p>
-    </div>
-  );
-};
-
-// Main App Component
-const App = () => {
-  const [selectedDebater, setSelectedDebater] = useState(null);
-
-  const handleCardClick = (debater) => {
-    setSelectedDebater(debater);
-  };
-
-  const closeModal = () => {
-    setSelectedDebater(null);
-  };
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 font-sans text-gray-900 p-4 sm:p-6 md:p-8">
-      {/* Header */}
-      <header className="text-center mb-10">
-        <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-blue-700 leading-tight">
-          Debater's Arena
-        </h1>
-        <p className="text-xl sm:text-2xl text-gray-600 mt-2">
-          Track the best debaters and their epic matches!
-        </p>
-      </header>
-
-      {/* Debaters Section */}
-      <section className="mb-12">
-        <h2 className="text-3xl sm:text-4xl font-bold text-center text-blue-600 mb-8">
-          Meet Our Debaters
-        </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {debaterData.debaters.map((debater) => (
-            <DebaterCard key={debater.id} debater={debater} onClick={handleCardClick} />
-          ))}
-        </div>
-      </section>
-
-      {/* Matches Section */}
-      <section>
-        <h2 className="text-3xl sm:text-4xl font-bold text-center text-blue-600 mb-8">
-          Recent Matches
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {debaterData.matches.map((match) => (
-            <MatchCard key={match.id} match={match} />
-          ))}
-        </div>
-      </section>
-
-      {/* Debater Detail Modal */}
-      <DebaterDetailModal debater={selectedDebater} onClose={closeModal} />
-    </div>
-  );
-};
-
-export default App;
