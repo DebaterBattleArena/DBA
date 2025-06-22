@@ -993,29 +993,63 @@ document.addEventListener('DOMContentLoaded', () => {
         const recentMatchesSection = document.getElementById('recentMatchesSection');
         if (!recentMatchesSection) return;
 
-        // Sort matches by date (newest first) and take the latest 10
-        const sortedMatches = [...matches].sort((a, b) => {
+        // Custom recent matches data based on your request
+        const customRecentMatches = [
+            {
+                id: 'match-zogratis-muchibei',
+                debater1: { id: 'zogratis', name: 'Zogratis', photo: '5c6e6c7b-dc86-4ca3-a496-6b0d34eefa77.jpeg', character: 'Character Z' },
+                debater2: { id: 'muchibei', name: 'Muchibei', photo: 'assets/default_avatar.png', character: 'Character M' },
+                winner: 'Zogratis',
+                method: 'Decision',
+                date: '2025-06-20',
+                event: 'Special Event'
+            },
+            {
+                id: 'match-hiroo-renji',
+                debater1: { id: 'hiroo', name: 'Hiroo', photo: '4ba98405-9174-4806-86b0-48db675ff249.jpeg', character: 'Character H' },
+                debater2: { id: 'renji', name: 'Renji', photo: 'assets/default_avatar.png', character: 'Character R' },
+                winner: 'Hiroo',
+                method: 'KO',
+                date: '2025-06-19',
+                event: 'Weekly Tournament'
+            },
+            {
+                id: 'match-aryanwt-rim',
+                debater1: { id: 'aryanwt', name: 'Aryanwt', photo: '16f4edc9-df34-4106-aa40-cecc9f3ad6e8.jpeg', character: 'Character A' },
+                debater2: { id: 'rim', name: 'Rim', photo: 'assets/default_avatar.png', character: 'Character Ri' },
+                winner: 'Aryanwt',
+                method: 'Submission',
+                date: '2025-06-18',
+                event: 'Qualifier Match'
+            }
+        ];
+
+        // Combine custom matches with existing recent matches from data.json, prioritizing custom ones
+        const displayedMatches = [...customRecentMatches, ...matches].filter((match, index, self) =>
+            index === self.findIndex((m) => (
+                (m.id && m.id === match.id) ||
+                (m.debater1?.name === match.debater1?.name && m.debater2?.name === match.debater2?.name && m.date === match.date)
+            ))
+        ).sort((a, b) => {
             const dateA = a.date ? new Date(a.date) : new Date(0);
             const dateB = b.date ? new Date(b.date) : new Date(0);
             return dateB.getTime() - dateA.getTime();
-        }).slice(0, 10); // Show 10 latest matches
+        }).slice(0, 10); // Show 10 latest unique matches
 
         let html = '';
-        if (sortedMatches.length > 0) {
-            sortedMatches.forEach(match => {
+        if (displayedMatches.length > 0) {
+            displayedMatches.forEach(match => {
                 const debater1Id = match.debater1?.id;
                 const debater2Id = match.debater2?.id;
 
                 const debater1FullData = debater1Id ? allDebatersData.find(d => d.id === debater1Id) : null;
                 const debater2FullData = debater2Id ? allDebatersData.find(d => d.id === debater2Id) : null;
 
-                const debater1DataForDisplay = debater1FullData || match.debater1 || {};
-                const debater2DataForDisplay = debater2FullData || match.debater2 || {};
-
-                const debater1Photo = debater1DataForDisplay.photo || 'assets/default_avatar.png';
-                const debater2Photo = debater2DataForDisplay.photo || 'assets/default_avatar.png';
-                const debater1Name = debater1DataForDisplay.name || 'Unknown Debater 1';
-                const debater2Name = debater2DataForDisplay.name || 'Unknown Debater 2';
+                // Prioritize photo and character from specific match data if provided, otherwise from full debater data, then default
+                const debater1Photo = match.debater1?.photo || debater1FullData?.photo || 'assets/default_avatar.png';
+                const debater2Photo = match.debater2?.photo || debater2FullData?.photo || 'assets/default_avatar.png';
+                const debater1Name = match.debater1?.name || debater1FullData?.name || 'Unknown Debater 1';
+                const debater2Name = match.debater2?.name || debater2FullData?.name || 'Unknown Debater 2';
                 const debater1Character = match.debater1?.character || debater1FullData?.character || 'Unknown';
                 const debater2Character = match.debater2?.character || debater2FullData?.character || 'Unknown';
 
@@ -1125,7 +1159,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 debaterMatches.forEach(match => {
                     const opponentMatchData = match.debater1?.id === debater.id ? match.debater2 : match.debater1;
                     const opponentId = opponentMatchData?.id;
-                    const opponentFullData = opponentId ? allDebatersData.find(d => d.id === opponentId) : null;
+                    const opponentFullData = allDebatersData.find(d => d.id === opponentId);
 
                     const isWinner = match.winner === debater.name;
                     const statusBadgeClass = isWinner ? 'bg-success' : 'bg-danger';
@@ -1460,3 +1494,4 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
 });
+
